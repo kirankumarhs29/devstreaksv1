@@ -32,6 +32,7 @@ kotlin {
         }
     }
 
+
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
@@ -98,10 +99,11 @@ kotlin {
 
 android {
     namespace = "com.dailydevchallenge.devstreaks"
-    compileSdk = 35
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         applicationId = "com.dailydevchallenge.devstreaks.android"
-        minSdk = 24
+        minSdk = libs.versions.android.minSdk.get().toInt()
+        targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
     }

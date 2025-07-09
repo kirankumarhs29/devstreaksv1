@@ -68,7 +68,7 @@ class AndroidNotificationScheduler(private val context: Context) : NotificationS
 
 class AndroidPushMessageHandler : PushMessageHandler {
     override fun onPushReceived(title: String, message: String, data: Map<String, String>) {
-        Log.d("PushMessageHandler", "Received push: $title - $message with data: $data")
+       // Log.d("PushMessageHandler", "Received push: $title - $message with data: $data")
 
         // You can route this to NotificationScheduler
         val scheduler = getNotificationScheduler()
@@ -81,7 +81,7 @@ class MyFirebaseService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         // 🔐 You MUST send this token to your backend or save it locally
-        Log.d("FCM", "Refreshed token: $token")
+        // Log.d("FCM", "Refreshed token: $token")
 
         // Optionally: Store in SharedPreferences or your local database
         // Or sync to your server for targeted messaging
