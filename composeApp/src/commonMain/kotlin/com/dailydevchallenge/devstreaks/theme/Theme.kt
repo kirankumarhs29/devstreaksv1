@@ -4,10 +4,8 @@ package com.dailydevchallenge.devstreaks.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-//import com.dailydevchallenge.settings.DarkModeSettings
+//import com.dailydevchallenge.devstreaks.settings.DarkModeSettings
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF3366FF),

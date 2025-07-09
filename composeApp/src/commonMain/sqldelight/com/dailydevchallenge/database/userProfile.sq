@@ -1,0 +1,55 @@
+--  UserProfile.sq
+
+CREATE TABLE User (
+  userId TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  passwordHash TEXT NOT NULL,
+  username TEXT NOT NULL,
+  avatarUrl TEXT,
+  createdAt TEXT NOT NULL,
+  xp INTEGER DEFAULT 0,
+  level INTEGER DEFAULT 1,
+  dailyStreak INTEGER DEFAULT 0,
+  lastLogin TEXT NOT NULL,
+  preferences TEXT DEFAULT '{}'
+);
+CREATE TABLE userProfile (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    goal TEXT,
+    skills TEXT, -- Or normalized to a Skills table
+    experience TEXT,
+    time_per_day TEXT,
+    days TEXT,
+    style TEXT,
+    fear TEXT,
+    FOREIGN KEY (userId) REFERENCES User(userId)
+);
+CREATE TABLE UserProgress (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    completedTaskId TEXT,
+    completedDate TEXT,
+    FOREIGN KEY (userId) REFERENCES User(userId)
+);
+
+selectAllUserProgress:
+SELECT * FROM UserProgress;
+
+
+selectProfile:
+SELECT * FROM userProfile WHERE userId = ? LIMIT 1;
+
+insertOrReplaceProfile:
+INSERT OR REPLACE INTO userProfile(id, userId, goal, skills, experience, time_per_day, days, style, fear)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteProfile:
+DELETE FROM userProfile WHERE userId = ?;
+
+-- Updated user-specific progress
+selectUserProgressByTask:
+SELECT * FROM UserProgress WHERE completedTaskId = ? AND userId = ?;
+
+insertUserProgress:
+INSERT INTO UserProgress(id, userId, completedTaskId, completedDate) VALUES (?, ?, ?, ?);

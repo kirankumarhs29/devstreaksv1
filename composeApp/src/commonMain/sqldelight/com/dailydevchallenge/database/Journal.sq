@@ -1,0 +1,20 @@
+CREATE TABLE Journal(
+    id TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    isSynced INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM Journal;
+
+selectById:
+SELECT * FROM Journal WHERE id = ?;
+
+insertJournal:
+INSERT OR REPLACE INTO Journal(id, title, content, timestamp, isSynced)
+VALUES (?, ?, ?, ?, ?);
+
+deleteJournal:
+DELETE FROM Journal WHERE id = ?;

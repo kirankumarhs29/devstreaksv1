@@ -1,0 +1,191 @@
+-- Challenge Path.sq
+CREATE TABLE ChallengePath (
+  id TEXT PRIMARY KEY,
+  track TEXT NOT NULL
+);
+
+-- Task Table (Updated to support all ChallengeTask fields)
+CREATE TABLE ChallengeTask (
+  id TEXT PRIMARY KEY,
+  pathId TEXT NOT NULL,
+  day INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  content TEXT NOT NULL,
+  xp INTEGER NOT NULL,
+  checklist TEXT,
+  whyItMatters TEXT,
+  bonus TEXT,
+  tip TEXT,
+  aiBreakdown TEXT,
+  videoUrl TEXT,
+  codeExample TEXT,
+  FOREIGN KEY (pathId) REFERENCES ChallengePath(id)
+);
+
+
+CREATE TABLE ChallengeActivity (
+    id TEXT PRIMARY KEY,
+    taskId TEXT NOT NULL,
+    type TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    options TEXT,
+    correctAnswer TEXT,
+    language TEXT,
+    starterCode TEXT,
+    explanation TEXT,
+    videoUrl TEXT
+);
+
+-- CREATE TABLE UserProgress (
+--     id TEXT PRIMARY KEY,
+--     userId TEXT NOT NULL, -- ✅ Add this line
+--     completedTaskId TEXT,
+--     completedDate TEXT
+-- );
+
+CREATE TABLE UserStats (
+    id TEXT PRIMARY KEY,
+    xp INTEGER,
+    streak INTEGER,
+    lastCompletedDate TEXT
+);
+
+CREATE TABLE ChecklistProgress (
+    id TEXT PRIMARY KEY, -- UUID
+    taskId TEXT NOT NULL,
+    item TEXT NOT NULL,
+    isChecked INTEGER NOT NULL, -- 0 = false, 1 = true
+    FOREIGN KEY (taskId) REFERENCES ChallengeTask(id)
+);
+CREATE TABLE CompletedChallenge (
+    pathId TEXT NOT NULL,
+    completedDate TEXT NOT NULL
+);
+
+CREATE TABLE TaskReflection (
+    id TEXT PRIMARY KEY, -- Add this line (UUID)
+    taskId TEXT NOT NULL,
+    reflection TEXT NOT NULL,
+    timestamp TEXT NOT NULL
+);
+
+
+-- -- Insert progress
+-- -- Insert a completed task record
+-- selectUserProgressByTask:
+-- SELECT * FROM UserProgress WHERE completedTaskId = ? AND userId = ?;
+--
+-- -- Check if a task was completed
+-- selectUserProgressByTask:
+-- SELECT * FROM UserProgress
+-- WHERE completedTaskId = ?;
+
+-- Upsert user stats (XP, streak, lastCompletedDate)
+insertOrReplaceUserStats:
+INSERT OR REPLACE INTO UserStats(id, xp, streak, lastCompletedDate)
+VALUES (?, ?, ?, ?);
+
+-- Get current stats
+selectUserStats:
+SELECT * FROM UserStats
+LIMIT 1;
+
+
+-- QUERY: Get all paths
+selectAllPaths:
+SELECT * FROM ChallengePath;
+
+-- QUERY: Insert a new path
+insertPath:
+INSERT INTO ChallengePath(id, track) VALUES (?, ?);
+
+-- QUERY: Get tasks for a path
+selectTasksForPath:
+SELECT * FROM ChallengeTask WHERE pathId = ?;
+
+-- ✅ QUERY: Insert a task (updated to include all fields)
+insertTask:
+INSERT INTO ChallengeTask (
+  id,
+  pathId,
+  day,
+  title,
+  type,
+  content,
+  xp,
+  checklist,
+  whyItMatters,
+  bonus,
+  tip,
+  aiBreakdown,
+  videoUrl,
+  codeExample
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+
+selectTaskById:
+SELECT * FROM ChallengeTask WHERE id = ?;
+
+insertChecklistProgress:
+INSERT OR REPLACE INTO ChecklistProgress(id, taskId, item, isChecked)
+VALUES (?, ?, ?, ?);
+
+selectChecklistForTask:
+SELECT * FROM ChecklistProgress WHERE taskId = ?;
+
+-- QUERY: Get all completed tasks
+-- selectAllUserProgress:
+-- SELECT * FROM UserProgress;
+
+insertActivity:
+INSERT INTO ChallengeActivity (
+  id,
+  taskId,
+  type,
+  prompt,
+  options,
+  correctAnswer,
+  language,
+  starterCode,
+  explanation,
+  videoUrl
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectActivitiesByTask:
+SELECT * FROM ChallengeActivity WHERE taskId = ?;
+
+deleteActivitiesForTask:
+DELETE FROM ChallengeActivity WHERE taskId = ?;
+
+CREATE INDEX idx_task_pathId ON ChallengeTask(pathId);
+-- CREATE INDEX idx_progress_task ON UserProgress(completedTaskId);
+CREATE INDEX idx_activity_taskId ON ChallengeActivity(taskId);
+
+selectPathById:
+SELECT id, track FROM ChallengePath WHERE id = ?;
+
+-- 👇 Add this
+insertCompletedChallenge:
+INSERT INTO CompletedChallenge(pathId, completedDate) VALUES (?, ?);
+
+-- 👇 Add this
+insertTaskReflection:
+INSERT INTO TaskReflection(id, taskId, reflection, timestamp)
+VALUES (?, ?, ?, ?);
+
+-- 👇 Add this
+selectAllCompletedChallenges:
+SELECT * FROM CompletedChallenge;
+
+-- 👇 Add this
+selectAllReflections:
+SELECT * FROM TaskReflection;
+
+
+
+
+
+
+
+

@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <!-- Background Circle -->
+    <path
+        android:fillColor="#121212"
+        android:pathData="M256,0C397,0 512,115 512,256C512,397 397,512 256,512C115,512 0,397 0,256C0,115 115,0 256,0Z"/>
+
+    <!-- Flame (Streak Symbol) -->
+    <path
+        android:fillColor="#FF6F00"
+        android:pathData="M256,400c-44,-20 -80,-60 -80,-120 0,-48 28,-92 56,-120 12,20 24,36 40,56 16,20 32,48 32,88 0,40 -24,72 -48,96Z"/>
+
+    <!-- Code Brackets -->
+    <path
+        android:strokeWidth="32"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M176,192 L144,256 L176,320"/>
+    <path
+        android:strokeWidth="32"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#FFFFFF"
+        android:pathData="M336,192 L368,256 L336,320"/>
+</vector>

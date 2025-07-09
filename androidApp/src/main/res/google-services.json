@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "508637008641",
+    "project_id": "devsteaks",
+    "storage_bucket": "devsteaks.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508637008641:android:a79b6db49ea28cbf1b4100",
+        "android_client_info": {
+          "package_name": "com.dailydevchallenge.devstreaks.androidapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_FoaqXUiR5JT80_LuO6uGEek3SoZn9_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508637008641:android:1d8524a79acb032a1b4100",
+        "android_client_info": {
+          "package_name": "com.dailydevchallenge.devstreaks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_FoaqXUiR5JT80_LuO6uGEek3SoZn9_k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,12 +4,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxSerialization)
     alias(libs.plugins.googleServicesPlugin)
     alias(libs.plugins.sqlDelight)
+    id("com.google.firebase.crashlytics")
 }
 
 kotlin {
@@ -19,7 +20,7 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-    
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -99,7 +100,23 @@ android {
     namespace = "com.dailydevchallenge.devstreaks"
     compileSdk = 35
     defaultConfig {
+        applicationId = "com.dailydevchallenge.devstreaks.android"
         minSdk = 24
+        versionCode = 1
+        versionName = "1.0"
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            firebaseCrashlytics {
+                mappingFileUploadEnabled = true
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -110,13 +127,15 @@ dependencies {
 
     implementation(libs.androidx.runtime.android)
     implementation(compose.material)
+    implementation(libs.work.runtime.ktx)
+
     debugImplementation(compose.uiTooling)
     implementation(libs.androidx.foundation.android)
 }
 sqldelight {
     databases {
         create("ChallengeDatabase") {
-            packageName = "com.dailydevchallenge.database"
+            packageName = "com.dailydevchallenge.devstreaks.database"
             version = 1
         }
     }

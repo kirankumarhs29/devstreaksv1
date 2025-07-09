@@ -1,0 +1,37 @@
+CREATE TABLE conversationMemory (
+    id TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    userAnswer TEXT NOT NULL,
+    feedback TEXT,
+    timestamp INTEGER DEFAULT (strftime('%s','now'))
+);
+
+
+selectRecentMemories:
+SELECT * FROM conversationMemory
+ORDER BY rowid DESC
+LIMIT ?;
+
+insertMemory:
+INSERT INTO conversationMemory(id, question, userAnswer, feedback, timestamp)
+VALUES (?, ?, ?, ?, ?);
+
+selectAll:
+SELECT * FROM conversationMemory ORDER BY rowid DESC;
+
+updateFeedback:
+UPDATE conversationMemory
+SET feedback = ?
+WHERE id = ?;
+
+deleteAll:
+DELETE FROM conversationMemory;
+
+selectAllMemories:
+SELECT * FROM conversationMemory
+ORDER BY rowid DESC;
+
+
+
+
+

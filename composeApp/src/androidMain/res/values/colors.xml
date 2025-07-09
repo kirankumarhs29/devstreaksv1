@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#673AB7</color> <!-- Dark splash -->
+<!--    // dark background color-->
+    <color name="splash_dark_background">#191426</color> <!-- Dark splash background -->
+    <color name="splash_orange">#FF6F00</color> <!-- Flame color -->
+    <color name="white">#FFFFFF</color>
+    <color name="splash_background">#7CBAE7</color>
+</resources>

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+
 android {
     namespace = "com.dailydevchallenge.devstreaks.android"
     compileSdk = 35
@@ -28,13 +29,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    implementation(projects.composeApp)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.runtime.android)
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.material3)
+    implementation(libs.firebase.messaging.ktx)
+    implementation(libs.google.firebase.crashlytics.ktx) // or whatever version you're using
+
 }
