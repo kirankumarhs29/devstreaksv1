@@ -11,7 +11,7 @@ import org.koin.dsl.module
 
 val iosModule = module {
     single { DatabaseDriverFactory() }
-    single<AuthService> { AuthServiceProvider.createAuthService() }
+//    single<AuthService> { AuthServiceProvider.createAuthService() }
     single<SessionManager> { IOSSessionManager() }
 
 }

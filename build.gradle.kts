@@ -9,4 +9,5 @@ plugins {
     alias(libs.plugins.sqlDelight) apply false
     alias(libs.plugins.googleServicesPlugin) apply false
     alias(libs.plugins.firebaseCrashlyticsPlugin) apply false
+    alias(libs.plugins.kotlinCocoapods) apply false
 }

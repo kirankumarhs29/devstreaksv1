@@ -1,0 +1,12 @@
+source 'https://cdn.cocoapods.org'
+
+platform :ios, '16.0'
+use_frameworks!
+
+target 'iosApp' do
+  pod 'FirebaseCore'
+  pod 'FirebaseAuth'
+  pod 'GoogleUtilities'
+  pod 'FirebaseAnalytics'
+  pod 'Devstreaks', :path => '../composeApp'
+end

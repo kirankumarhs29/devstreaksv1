@@ -222,6 +222,7 @@ kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 sqlDelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 kotlinCocoapods = { id = "org.jetbrains.kotlin.native.cocoapods", version.ref = "kotlin" }
 
+
 googleServicesPlugin = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 
 firebaseCrashlyticsPlugin = { id = "com.google.firebase.crashlytics", version.ref = "fibebaseCrashlyticsKtx" }

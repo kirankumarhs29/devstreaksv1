@@ -1,6 +1,7 @@
 import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -10,6 +11,7 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
     alias(libs.plugins.googleServicesPlugin)
     alias(libs.plugins.sqlDelight)
+    alias(libs.plugins.kotlinCocoapods)
     id("com.google.firebase.crashlytics")
 }
 
@@ -21,15 +23,39 @@ kotlin {
         }
     }
 
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "composeApp"
-            isStatic = true
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+    cocoapods {
+        summary = "DevStreak Shared Code"
+        homepage = "https://yourapp.dev"
+        ios.deploymentTarget = "16.0"
+        name = "Devstreaks"
+        podfile = project.file("../iosApp/Podfile")
+        pod("FirebaseCore"){
+            extraOpts += listOf("-compiler-option", "-fmodules")
         }
+        pod("FirebaseAuth"){
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+        pod("GoogleUtilities") {
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }// Required by Firebase
+        pod("FirebaseAnalytics"){
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+        framework {
+            baseName = "composeApp"
+            isStatic = false
+//            export(project(":composeApp"))
+            transitiveExport = true
+//            freeCompilerArgs += listOf(
+//                "-Xbinary=bundleId=com.dailydevchallenge.devstreaks"
+//            )
+        }
+        xcodeConfigurationToNativeBuildType["CUSTOM_DEBUG"] = NativeBuildType.DEBUG
+        xcodeConfigurationToNativeBuildType["CUSTOM_RELEASE"] = NativeBuildType.RELEASE
+
     }
 
 
@@ -52,8 +78,13 @@ kotlin {
             implementation(libs.com.google.firebase.firebase.auth.ktx)
             implementation(libs.google.firebase.firestore.ktx)
             implementation(libs.firebase.messaging)
+            implementation(libs.foundation)
+            implementation(libs.foundation.layout)
+//            implementation(libs.accompanist.pager)
+//            implementation(libs.accompanist.pager.indicators)
         }
         commonMain.dependencies {
+            implementation(libs.material.icons.extended)
             implementation(libs.navigation.compose)
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -68,7 +99,7 @@ kotlin {
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
-            implementation(libs.koin.compose.viewmodel)
+//            implementation(libs.koin.compose.viewmodel)
 
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.no.arg)
@@ -76,11 +107,7 @@ kotlin {
 
 //            implementation(libs.lottie.compose)
             implementation(compose.foundation)
-            implementation(libs.foundation)
-            implementation(libs.foundation.layout)
-//            implementation(libs.accompanist.pager)
-//            implementation(libs.accompanist.pager.indicators)
-            implementation(libs.material.icons.extended)
+
             implementation(libs.calf.file.picker)
 
 
