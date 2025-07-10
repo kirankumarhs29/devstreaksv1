@@ -20,12 +20,21 @@ kotlin {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
+            freeCompilerArgs = listOf(
+                "-Xexpect-actual-classes" // Suppress expect/actual warning
+            )
         }
     }
 
     iosX64()
     iosArm64()
     iosSimulatorArm64()
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        binaries.framework {
+            baseName = "Devstreaks" // 👈 Must match usage
+            isStatic = false
+        }
+    }
     cocoapods {
         summary = "DevStreak Shared Code"
         homepage = "https://yourapp.dev"
@@ -45,9 +54,10 @@ kotlin {
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
         framework {
-            baseName = "composeApp"
+            baseName = "Devstreaks"
             isStatic = false
 //            export(project(":composeApp"))
+            @OptIn(ExperimentalKotlinGradlePluginApi::class)
             transitiveExport = true
 //            freeCompilerArgs += listOf(
 //                "-Xbinary=bundleId=com.dailydevchallenge.devstreaks"
@@ -117,6 +127,7 @@ kotlin {
             implementation(libs.sqldelight.ios)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

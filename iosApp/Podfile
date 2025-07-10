@@ -1,5 +1,3 @@
-source 'https://cdn.cocoapods.org'
-
 platform :ios, '16.0'
 use_frameworks!
 
@@ -10,3 +8,22 @@ target 'iosApp' do
   pod 'FirebaseAnalytics'
   pod 'Devstreaks', :path => '../composeApp'
 end
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+        if target.name == 'PromisesObjC' || target.name == 'FirebaseAuthInterop'
+            config.build_settings['QUOTE_HEADERS_IN_FRAMEWORK_HEADERS_ARE_PRIVATE'] = 'NO'
+        end
+    config.build_settings['ALWAYS_SEARCH_USER_PATHS'] = 'NO'
+      config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+      config.build_settings['GCC_WARN_INSUFFICIENT_DESIGNATED_INITIALIZERS'] = 'NO'
+      config.build_settings['GCC_WARN_64_TO_32_BIT_CONVERSION'] = 'NO'
+      config.build_settings['SWIFT_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+      config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+      config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+      config.build_settings['OTHER_CFLAGS'] = ['-w']
+      config.build_settings['WARNING_CFLAGS'] = ''
+    end
+  end
+end
+
