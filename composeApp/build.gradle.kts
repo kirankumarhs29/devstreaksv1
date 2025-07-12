@@ -56,7 +56,6 @@ kotlin {
         framework {
             baseName = "Devstreaks"
             isStatic = false
-//            export(project(":composeApp"))
             @OptIn(ExperimentalKotlinGradlePluginApi::class)
             transitiveExport = true
 //            freeCompilerArgs += listOf(
