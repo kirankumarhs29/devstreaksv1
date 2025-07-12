@@ -6,6 +6,12 @@ xcuserdata
 !src/**/build/
 local.properties
 .idea
+# Gradle
+.gradle/
+build/
+gradle.properties
+gradlew
+gradlew.bat
 
 captures
 .externalNativeBuild
