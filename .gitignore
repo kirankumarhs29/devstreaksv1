@@ -1,38 +1,41 @@
+# --- General ---
 *.iml
-.kotlin
-.gradle
-**/build/
-xcuserdata
-!src/**/build/
-local.properties
-.idea
-# Gradle
+*.log
+*.hprof
+.DS_Store
+
+# --- Kotlin & Gradle ---
 .gradle/
 build/
-gradle.properties
+**/build/
+!src/**/build/         # Allow custom builds if necessary
+.kotlin/
+
+# --- Gradle Wrapper ---
 gradlew
 gradlew.bat
 
-captures
-.externalNativeBuild
-.cxx
-# Android Studio / IntelliJ
-*.hprof
-*.log
-# macOS
-.DS_Store
-# Kotlin Multiplatform CocoaPods
+# --- Properties ---
+local.properties       # Contains machine-specific paths/secrets (should not be pushed)
+# gradle.properties     <-- ❌ Remove this line to ALLOW versioned Gradle config
+
+# --- Android Studio / IntelliJ ---
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# --- iOS / Xcode ---
 iosApp/Pods/
 iosApp/Podfile.lock
 iosApp/iosApp.xcworkspace/
-composeApp/Devstreaks.podspec
-# Xcode Derived Data
-DerivedData/
-*.xcuserstate
-
-# Xcode auto-generated/shared data
 iosApp/iosApp.xcodeproj/project.xcworkspace/
 iosApp/iosApp.xcodeproj/xcshareddata/
+*.xcuserstate
+DerivedData/
 
-# iTunes Artwork (only for App Store upload, not needed in repo)
+# --- KMP / Compose ---
+composeApp/Devstreaks.podspec
+
+# --- iTunes Artwork ---
 iosApp/iosApp/Assets.xcassets/iTunesArtwork*.png
