@@ -46,9 +46,6 @@ composeApp/
 iosApp/ # iOS entry point
 androidApp/ # Android-specific code
 
-yaml
-Copy
-Edit
 
 
 
@@ -116,6 +113,4 @@ Screen	Description
 📊 Progress	XP & performance tracking
 
 🙌 Made with ❤️ by Kiran Kumar H S
-yaml
-Copy
-Edit
+
