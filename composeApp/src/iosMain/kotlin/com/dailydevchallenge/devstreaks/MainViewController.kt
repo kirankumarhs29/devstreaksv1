@@ -15,7 +15,7 @@ import platform.UserNotifications.UNUserNotificationCenter
 fun MainViewController() = ComposeUIViewController {
 
     startKoinIfNeeded()
-//    requestNotificationPermission()
+    requestNotificationPermission()
     KoinContext {
         App()
     }
