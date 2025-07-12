@@ -6,13 +6,27 @@ xcuserdata
 !src/**/build/
 local.properties
 .idea
-.DS_Store
+
 captures
 .externalNativeBuild
 .cxx
-*.xcodeproj/*
-!*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
-!*.xcworkspace/contents.xcworkspacedata
-**/xcshareddata/WorkspaceSettings.xcsettings
+# Android Studio / IntelliJ
+*.hprof
+*.log
+# macOS
+.DS_Store
+# Kotlin Multiplatform CocoaPods
+iosApp/Pods/
+iosApp/Podfile.lock
+iosApp/iosApp.xcworkspace/
+composeApp/Devstreaks.podspec
+# Xcode Derived Data
+DerivedData/
+*.xcuserstate
+
+# Xcode auto-generated/shared data
+iosApp/iosApp.xcodeproj/project.xcworkspace/
+iosApp/iosApp.xcodeproj/xcshareddata/
+
+# iTunes Artwork (only for App Store upload, not needed in repo)
+iosApp/iosApp/Assets.xcassets/iTunesArtwork*.png
