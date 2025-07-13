@@ -14,4 +14,7 @@ interface PdfPickerHandler {
 
 expect fun getPdfPickerHandler(): PdfPickerHandler
 
+@Composable
+expect fun SafeBackHandler(enabled: Boolean = true, onBack: () -> Unit)
+
 

@@ -18,9 +18,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
+import com.dailydevchallenge.devstreaks.utils.PlatformUtils
+import com.dailydevchallenge.devstreaks.utils.SafeBackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 @Composable
 fun LearningIntentScreen(
     viewModel: OnboardingViewModel,
@@ -34,6 +36,18 @@ fun LearningIntentScreen(
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var currentInput by remember { mutableStateOf("") }
     var isTyping by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
+    if (PlatformUtils.isAndroid()) {
+        SafeBackHandler(enabled = true) {
+            val hasUserStarted = messages.size > 1 || currentInput.isNotBlank() || isTyping
+            if (hasUserStarted) {
+                showExitDialog = true
+            } else {
+                navController.popBackStack()
+            }
+        }
+    }
+
 
     LaunchedEffect(Unit) {
         messages = listOf(
@@ -46,82 +60,120 @@ fun LearningIntentScreen(
     }
 
     LaunchedEffect(messages.size, currentInput) {
-        delay(100) // Slight delay to wait for layout shift
+        delay(100)
         scrollState.animateScrollToItem(messages.size)
     }
 
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .imePadding() // 👈 Handles keyboard push
-    ) {
-        LazyColumn(
-            state = scrollState,
+    Scaffold(
+        topBar = {
+            DevStreakTopBar(
+                title = "Your Dev Journey",
+                onBack = {
+                    val hasUserStarted = messages.size > 1 || currentInput.isNotBlank() || isTyping
+                    if (hasUserStarted) {
+                        showExitDialog = true
+                    } else {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(8.dp)
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding()
         ) {
-            items(messages) { msg ->
-                ChatBubble(msg)
-            }
-            if (isTyping) {
-                item {
-                    ChatBubble(ChatMessage(text = "Typing...", isUser = false), isLoading = true)
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(8.dp)
+            ) {
+                items(messages) { msg ->
+                    ChatBubble(msg)
                 }
-            }
-        }
-
-        val latest = messages.lastOrNull()
-
-        when (latest?.inputType) {
-            InputType.TEXT -> {
-                Surface(
-                    tonalElevation = 4.dp,
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 4.dp)
-                ) {
-                    ChatInputField(
-                        input = currentInput,
-                        onInputChange = { currentInput = it },
-                        onSend = {
-                            coroutineScope.launch {
-                                sendUserMessage(
-                                    input = currentInput,
-                                    currentMessages = messages,
-                                    onFinish = onFinish,
-                                    onUpdate = { messages = it },
-                                    setTyping = { isTyping = it }
-                                )
-                                currentInput = ""
-                                keyboardController?.hide()
-                            }
-                        }
-                    )
-                }
-            }
-
-            InputType.MULTI_CHOICE -> {
-                ChoiceChips(options = latest.options) { selected ->
-                    coroutineScope.launch {
-                        sendUserMessage(
-                            input = selected,
-                            currentMessages = messages,
-                            onFinish = onFinish,
-                            onUpdate = { messages = it },
-                            setTyping = { isTyping = it }
-                        )
+                if (isTyping) {
+                    item {
+                        ChatBubble(ChatMessage(text = "Typing...", isUser = false), isLoading = true)
                     }
                 }
             }
 
-            else -> {}
+            val latest = messages.lastOrNull()
+
+            when (latest?.inputType) {
+                InputType.TEXT -> {
+                    Surface(
+                        tonalElevation = 4.dp,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                    ) {
+                        ChatInputField(
+                            input = currentInput,
+                            onInputChange = { currentInput = it },
+                            onSend = {
+                                coroutineScope.launch {
+                                    sendUserMessage(
+                                        input = currentInput,
+                                        currentMessages = messages,
+                                        onFinish = onFinish,
+                                        onUpdate = { messages = it },
+                                        setTyping = { isTyping = it }
+                                    )
+                                    currentInput = ""
+                                    keyboardController?.hide()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                InputType.MULTI_CHOICE -> {
+                    ChoiceChips(options = latest.options) { selected ->
+                        coroutineScope.launch {
+                            sendUserMessage(
+                                input = selected,
+                                currentMessages = messages,
+                                onFinish = onFinish,
+                                onUpdate = { messages = it },
+                                setTyping = { isTyping = it }
+                            )
+                        }
+                    }
+                }
+
+                else -> {}
+            }
         }
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit Onboarding?") },
+                text = { Text("Are you sure you want to exit? Your progress will be lost.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showExitDialog = false
+                        navController.popBackStack()
+                    }) {
+                        Text("Exit")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Stay")
+                    }
+                }
+            )
+        }
+
     }
 }
+
 
 
 private suspend fun sendUserMessage(
