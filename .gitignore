@@ -12,8 +12,8 @@ build/
 .kotlin/
 
 # --- Gradle Wrapper ---
-gradlew
-gradlew.bat
+#gradlew
+#gradlew.bat
 
 # --- Properties ---
 local.properties       # Contains machine-specific paths/secrets (should not be pushed)
