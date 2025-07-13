@@ -7,6 +7,11 @@ import com.mohamedrejeb.calf.io.getName
 import com.mohamedrejeb.calf.io.readByteArray
 import com.mohamedrejeb.calf.picker.*
 import kotlinx.coroutines.launch
+import platform.Foundation.NSData
+import platform.PDFKit.*
+import kotlinx.cinterop.*
+import platform.Foundation.dataWithBytes
+
 
 @Composable
 actual fun SafeBackHandler(enabled: Boolean, onBack: () -> Unit) {
@@ -14,6 +19,8 @@ actual fun SafeBackHandler(enabled: Boolean, onBack: () -> Unit) {
 }
 
 actual fun getPdfPickerHandler(): PdfPickerHandler = CalfPdfPickerHandler
+
+actual fun getPdfTextExtractor(): PdfTextExtractor = IosPdfTextExtractor()
 
 object CalfPdfPickerHandler : PdfPickerHandler {
     @Composable
@@ -46,4 +53,23 @@ object CalfPdfPickerHandler : PdfPickerHandler {
             launcher.launch()
         }
     }
+}
+
+class IosPdfTextExtractor : PdfTextExtractor {
+    override suspend fun extractText(pdfBytes: ByteArray): String {
+        val nsData = pdfBytes.toNSData1()
+        val doc = PDFDocument(nsData)
+        val pageCount = doc.pageCount.toInt()
+        val result = StringBuilder()
+        for (i in 0 until pageCount) {
+            val page = doc.pageAtIndex(i.toULong())
+            val text = page?.string()
+            if (text != null) result.append(text).append("\n")
+        }
+        return result.toString()
+    }
+}
+@OptIn(ExperimentalForeignApi::class)
+fun ByteArray.toNSData1(): NSData = this.usePinned {
+    NSData.dataWithBytes(it.addressOf(0), size.toULong())
 }

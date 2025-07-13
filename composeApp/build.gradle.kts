@@ -96,8 +96,9 @@ kotlin {
             // Only inside androidMain
             implementation("androidx.activity:activity-compose:1.7.2")
             implementation(libs.lottie.compose)
-            implementation("dev.muazkadan:rive-cmp-android:0.0.5")
+//            implementation("dev.muazkadan:rive-cmp-android:0.0.5")
 //            implementation("org.apache.pdfbox:pdfbox:2.0.27")
+            implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 //            implementation(libs.accompanist.pager)
 //            implementation(libs.accompanist.pager.indicators)
         }
@@ -125,7 +126,7 @@ kotlin {
 
             implementation(compose.foundation)
             implementation(libs.calf.file.picker)
-            implementation("dev.muazkadan:rive-cmp:0.0.5")
+//            implementation("dev.muazkadan:rive-cmp:0.0.5")
 
 
 
@@ -135,8 +136,8 @@ kotlin {
             implementation(libs.sqldelight.ios)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
-            implementation("dev.muazkadan:rive-cmp-iosarm64:0.0.5")
-            implementation("dev.muazkadan:rive-cmp-iosx64:0.0.5")
+//            implementation("dev.muazkadan:rive-cmp-iosarm64:0.0.5")
+//            implementation("dev.muazkadan:rive-cmp-iosx64:0.0.5")
 
 
         }
@@ -158,7 +159,15 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1"
+            )
         }
     }
     buildTypes {

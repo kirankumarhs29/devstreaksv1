@@ -13,6 +13,11 @@ interface PdfPickerHandler {
     @Composable
     fun PickPdf(onTextExtracted: (String) -> Unit)
 }
+interface PdfTextExtractor {
+    suspend fun extractText(pdfBytes: ByteArray): String
+}
+
+expect fun getPdfTextExtractor(): PdfTextExtractor
 
 expect fun getPdfPickerHandler(): PdfPickerHandler
 

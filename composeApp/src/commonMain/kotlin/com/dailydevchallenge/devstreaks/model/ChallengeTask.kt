@@ -101,8 +101,8 @@ data class UserLearningHistory(
 data class InterviewQuestion(
     val question: String,
     val type: String,
-    val expectedAnswer: String,
-    val followUp: String
+    val expectedAnswer: String = "",
+    val followUp: String = ""
 )
 
 @Serializable
@@ -111,7 +111,7 @@ data class ResumeAnalysis(
     val skillsMatched: List<String>,
     val skillsMissing: List<String>,
     val jobMatchScore: Int, // out of 100
-    val recommendations: List<String>
+    val recommendations: String
 )
 
 
