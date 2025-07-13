@@ -1,10 +1,8 @@
 package com.dailydevchallenge.devstreaks.utils
 
 import androidx.compose.runtime.Composable
-import com.dailydevchallenge.devstreaks.utils.PdfPickerHandler
 import androidx.compose.runtime.*
 import com.mohamedrejeb.calf.core.LocalPlatformContext
-import com.mohamedrejeb.calf.io.KmpFile
 import com.mohamedrejeb.calf.io.getName
 import com.mohamedrejeb.calf.io.readByteArray
 import com.mohamedrejeb.calf.picker.*

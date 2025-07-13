@@ -18,6 +18,11 @@ import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.effectiveChallenges
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import kotlinx.coroutines.launch
+import io.github.raamcosta.lottie.compose.LottieCompositionSpec
+import io.github.raamcosta.lottie.compose.rememberLottieComposition
+import io.github.raamcosta.lottie.compose.LottieAnimation
+import io.github.raamcosta.lottie.compose.LottieConstants
+import androidx.compose.ui.res.useResource
 
 @Composable
 fun ChallengeDetailScreen(
@@ -196,5 +201,6 @@ fun CompletionCard() {
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
             )
         }
+        LottieCompositionSpec.RawRes(com.dailydevchallenge.devstreaks.R.raw.success_animation)
     }
 }

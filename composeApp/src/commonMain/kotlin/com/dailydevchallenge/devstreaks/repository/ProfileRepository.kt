@@ -7,6 +7,3 @@ interface ProfileRepository {
     suspend fun getProfile(userId: String): LearningProfile?
     suspend fun clearProfile(userId: String)
 }
-
-
-
