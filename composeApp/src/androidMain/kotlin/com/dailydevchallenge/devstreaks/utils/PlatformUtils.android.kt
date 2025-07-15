@@ -1,16 +1,14 @@
 package com.dailydevchallenge.devstreaks.utils
 
-import android.annotation.SuppressLint
-import android.net.Uri
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import com.mohamedrejeb.calf.io.getName
+import com.mohamedrejeb.calf.io.readByteArray
+import com.mohamedrejeb.calf.picker.rememberFilePickerLauncher
+import com.mohamedrejeb.calf.picker.FilePickerFileType
+import com.mohamedrejeb.calf.picker.FilePickerSelectionMode
 import kotlinx.coroutines.launch
-import java.io.InputStream
-//import org.apache.pdfbox.pdmodel.PDDocument
-//import org.apache.pdfbox.text.PDFTextStripper
 
 actual fun getPdfPickerHandler(): PdfPickerHandler = AndroidPdfPickerHandler
 
@@ -23,56 +21,44 @@ actual object PlatformUtils {
         // This should be triggered from the Composable below
     }
 }
+@Composable
+actual fun SafeBackHandler(enabled: Boolean, onBack: () -> Unit) {
+    BackHandler(enabled = enabled, onBack = onBack)
+}
 
 /**
  * This composable is used in your UI layer to trigger the Android PDF picker and extract text.
  */
 
 
-private fun extractTextFromPdf(inputStream: InputStream?): String {
-//    var document: PDDocument? = null
-//    return try {
-//        document = PDDocument.load(inputStream)
-//        val text = PDFTextStripper().getText(document)
-//        text
-//    } catch (e: Exception) {
-//        "❌ Failed to read PDF: ${e.message}"
-//    } finally {
-//        try { document?.close() } catch (_: Exception) {}
-//    }
-    return "❌ Failed to read PDF: "
-}
-
 
 object AndroidPdfPickerHandler : PdfPickerHandler {
     @Composable
     override fun PickPdf(onTextExtracted: (String) -> Unit) {
-        LaunchPdfPicker(onTextExtracted)
-    }
-}
-
-@SuppressLint("ContextCastToActivity")
-@Composable
-fun LaunchPdfPicker(onExtracted: (String) -> Unit) {
-    val context = LocalContext.current as ComponentActivity
-    val coroutineScope = rememberCoroutineScope()
-
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            coroutineScope.launch {
-                val contentResolver = context.contentResolver
-                val inputStream: InputStream? = contentResolver.openInputStream(uri)
-                if (inputStream == null) {
-                    onExtracted("❌ Could not open PDF")
-                    return@launch
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        val filePicker = rememberFilePickerLauncher(
+            type = FilePickerFileType.Pdf,
+            selectionMode = FilePickerSelectionMode.Single,
+            onResult = { files ->
+                val file = files.firstOrNull()
+                if (file != null) {
+                    coroutineScope.launch {
+                        val fileName = file.getName(context) ?: "Unknown"
+                        val fileBytes = file.readByteArray(context)
+                        val fileSizeKb = fileBytes.size / 1024
+                        val summary = "📄 $fileName ($fileSizeKb KB)"
+                        onTextExtracted(summary)
+                    }
+                } else {
+                    onTextExtracted("❌ No file selected")
                 }
-                val text = extractTextFromPdf(inputStream)
-                onExtracted(text)
             }
+        )
+
+        LaunchedEffect(Unit) {
+            filePicker.launch()
         }
     }
-
-    LaunchedEffect(Unit) {
-        launcher.launch(arrayOf("application/pdf"))
-    }
 }
+

@@ -1,4 +1,3 @@
-import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
@@ -89,6 +88,9 @@ kotlin {
             implementation(libs.firebase.messaging)
             implementation(libs.foundation)
             implementation(libs.foundation.layout)
+            // Only inside androidMain
+            implementation("androidx.activity:activity-compose:1.7.2")
+//            implementation("org.apache.pdfbox:pdfbox:2.0.27")
 //            implementation(libs.accompanist.pager)
 //            implementation(libs.accompanist.pager.indicators)
         }
@@ -152,6 +154,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            //noinspection WrongGradleMethod
             firebaseCrashlytics {
                 mappingFileUploadEnabled = true
             }
