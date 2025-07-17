@@ -1,11 +1,12 @@
 package com.dailydevchallenge.devstreaks.llm
+import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class ChatRequest(
-    val model: String,
-    val messages: List<ChatMessage>
-)
+//@Serializable
+//data class ChatRequest(
+//    val model: String,
+//    val messages: List<ChatMessage>
+//)
 
 @Serializable
 data class ChatMessage(
@@ -31,7 +32,8 @@ data class GenerateCourseRequest(
 )
 
 sealed class ChatUIMessage {
-    data class Sent(val text: String) : ChatUIMessage()
-    data class Received(val text: String) : ChatUIMessage()
+    data class Sent(val text: String, val timestamp: Long = Clock.System.now().toEpochMilliseconds()) : ChatUIMessage()
+    data class Received(val text: String, val timestamp: Long = Clock.System.now().toEpochMilliseconds()) : ChatUIMessage()
 }
+
 

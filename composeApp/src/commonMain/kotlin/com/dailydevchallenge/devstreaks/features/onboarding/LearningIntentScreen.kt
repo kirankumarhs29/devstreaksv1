@@ -123,7 +123,8 @@ fun LearningIntentScreen(
                                         currentMessages = messages,
                                         onFinish = onFinish,
                                         onUpdate = { messages = it },
-                                        setTyping = { isTyping = it }
+                                        setTyping = { isTyping = it },
+                                        viewModel = viewModel
                                     )
                                     currentInput = ""
                                     keyboardController?.hide()
@@ -141,7 +142,8 @@ fun LearningIntentScreen(
                                 currentMessages = messages,
                                 onFinish = onFinish,
                                 onUpdate = { messages = it },
-                                setTyping = { isTyping = it }
+                                setTyping = { isTyping = it },
+                                viewModel = viewModel
                             )
                         }
                     }
@@ -181,7 +183,8 @@ private suspend fun sendUserMessage(
     currentMessages: List<ChatMessage>,
     onFinish: (String, List<String>, String, String, String, String, String) -> Unit,
     onUpdate: (List<ChatMessage>) -> Unit,
-    setTyping: (Boolean) -> Unit
+    setTyping: (Boolean) -> Unit,
+    viewModel: OnboardingViewModel
 ) {
     if (input.isBlank()) return
 
@@ -242,7 +245,9 @@ private suspend fun sendUserMessage(
             val fear = userInputs.getOrNull(6) ?: ""
 
             val skills = skillsRaw.split(",").map { it.trim() }
+            viewModel.markOnboardingComplete()
             onFinish(goal, skills, experience, time, days, style, fear)
+
 
             ChatMessage(
                 text = "✅ Awesome! Your personalized plan is loading... 🚀",

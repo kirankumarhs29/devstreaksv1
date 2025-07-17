@@ -96,6 +96,7 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
             )
         }
     ) { padding ->
+
         LazyColumn(
             modifier = Modifier
                 .padding(padding)
@@ -103,15 +104,46 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            item {
-                Text("Welcome back! 🔥", style = MaterialTheme.typography.titleLarge)
-                Text("You're on a ${stats.streak}-day streak.", style = MaterialTheme.typography.bodyMedium)
-            }
-            item {
-                UserStatsCard(level, stats.xp, stats.streak, currentDay, totalDays, eta.toString(), trackName)
+//            if (stats.xp == 0) {
+//                item {
+//                    OnboardingCard {
+//                        navController.navigate(Routes.LearningIntent)
+//                    }
+//                }
+//            }
+//            item {
+//                Text("Welcome back! 🔥", style = MaterialTheme.typography.titleLarge)
+//                Text("You're on a ${stats.streak}-day streak.", style = MaterialTheme.typography.bodyMedium)
+//            }
+//            item {
+//                UserStatsCard(level, stats.xp, stats.streak, currentDay, totalDays, eta.toString(), trackName)
+//            }
+            val stats1: () -> DisplayStats = {
+                DisplayStats(
+                    level = level,
+                    xp = stats.xp,
+                    streak = stats.streak,
+                    currentDay = currentDay,
+                    totalDays = totalDays,
+                    trackName = trackName,
+                    eta = eta.toString()
+                )
             }
 
-            if (today != null) {
+            val onboardingCompleted by viewModel.onboardingCompleted
+            if (onboardingCompleted) {
+                item {
+                    WelcomeHeroCard(
+                        stats = stats1,
+                        onStartClick = {
+                            viewModel.setOnboardingCompleted(true)
+                            navController.navigate(Routes.LearningIntent)
+                        },
+                        onBoardingCompleted = onboardingCompleted
+                    )
+                }
+            }
+             if (today != null) {
                     item {
                         HeroBanner(task = today!!) {
                                 navController.navigate(LearnRoute(today!!.id))
@@ -368,7 +400,7 @@ fun ChallengeMiniCard(task: ChallengeTask, isCompleted: Boolean, onClick: () -> 
 }
 
 @Composable
-fun UserStatsCard(
+fun UserStatsContent(
     level: Int,
     xp: Int,
     streak: Int,
@@ -381,43 +413,44 @@ fun UserStatsCard(
     val animatedProgress by animateFloatAsState(targetValue = progress)
     val glowLevelUp = remember { derivedStateOf { xp % 100 == 0 && xp != 0 } }
     val glow by animateFloatAsState(
-        targetValue = if (glowLevelUp.value) 1.15f else 1f,
+        targetValue = if (glowLevelUp.value) 1.1f else 1f,
         animationSpec = tween(durationMillis = 500)
     )
 
-    Card(
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
             .graphicsLayer(scaleX = glow, scaleY = glow)
+            .fillMaxWidth()
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
-                    progress = { animatedProgress },
-                    strokeWidth = 8.dp,
-                    modifier = Modifier.size(90.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Lv $level", style = MaterialTheme.typography.titleMedium)
-                    Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
-                }
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { animatedProgress },
+                strokeWidth = 8.dp,
+                modifier = Modifier.size(90.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Lv $level", style = MaterialTheme.typography.titleMedium)
+                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
             }
+        }
 
-            Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(16.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("🔥 $streak-Day Streak", style = MaterialTheme.typography.bodyMedium)
-                Text("📅 Day $currentDay of $totalDays", style = MaterialTheme.typography.bodyMedium)
-                Text("⭐ ${xp % 100} XP to next level", style = MaterialTheme.typography.bodyMedium)
-                Text("🛤️ Track: $currentTrack", style = MaterialTheme.typography.bodyMedium)
-                Text("📆 ETA: $eta", style = MaterialTheme.typography.bodySmall)
-            }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("🔥 $streak-Day Streak", style = MaterialTheme.typography.bodyMedium)
+            Text("📅 Day $currentDay of $totalDays", style = MaterialTheme.typography.bodyMedium)
+            Text("⭐ ${xp % 100} XP to next level", style = MaterialTheme.typography.bodyMedium)
+            Text("🛤️ Track: $currentTrack", style = MaterialTheme.typography.bodyMedium)
+            Text("📆 ETA: $eta", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
+
 
 @Composable
 fun TapToStartButton(onClick: () -> Unit) {
@@ -457,5 +490,89 @@ fun TapToStartButton(onClick: () -> Unit) {
         }
     }
 }
+// adding onboarding for first time users
+@Composable
+fun OnboardingCard(onStartClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(6.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "🚀 Welcome to DevStreak!",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Text(
+                text = "Ready to build your streak and grow your dev skills daily?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            TapToStartButton(onClick = onStartClick)
+        }
+    }
+}
+@Composable
+fun WelcomeHeroCard(
+    stats: () -> DisplayStats,
+    onStartClick: () -> Unit,
+    onBoardingCompleted: Boolean
+) {
+    val values = stats()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(6.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = if (!onBoardingCompleted) "🚀 Welcome to DevStreak!" else "🔥 Welcome back!",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Text(
+                text = if (!onBoardingCompleted)
+                    "Ready to build your streak and grow your dev skills daily?"
+                else
+                    "You're on a ${values.streak}-day streak. Let's keep the momentum!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            // Use non-card stats layout for alignment consistency
+            UserStatsContent(
+                level = values.level,
+                xp = values.xp,
+                streak = values.streak,
+                currentDay = values.currentDay,
+                totalDays = values.totalDays,
+                eta = values.eta,
+                currentTrack = values.trackName
+            )
+
+            if (!onBoardingCompleted) {
+                TapToStartButton(onClick = onStartClick)
+            }
+        }
+    }
+}
+
 
 

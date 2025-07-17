@@ -98,13 +98,31 @@ data class UserLearningHistory(
 )
 
 @Serializable
+//data class InterviewQuestion(
+//    val question: String,
+//    val type: String,
+//    val expectedAnswer: String = "",
+//    val followUp: String = ""
+//)
 data class InterviewQuestion(
     val question: String,
-    val type: String,
-    val expectedAnswer: String = "",
     val followUp: String = ""
 )
 
+@Serializable
+data class InterviewStepResult(
+    val question: InterviewQuestion?, // null when finished
+    val feedback: String?, // Feedback/critique for user's last answer
+    val done: Boolean // true if interview complete
+)
+
+@Serializable
+data class InterviewSessionContext(
+    val jobRole: String,
+    val resumeSummary: String,
+    val skills: List<String>,
+    val answerHistory: List<Pair<String, String>> // List of (question, answer) so far
+)
 @Serializable
 data class ResumeAnalysis(
     val summary: String,
@@ -113,6 +131,28 @@ data class ResumeAnalysis(
     val jobMatchScore: Int, // out of 100
     val recommendations: String
 )
+
+@Serializable
+data class StartInterviewPayload(
+    val jobRole: String,
+    val resumeSummary: String,
+    val skills: List<String>
+)
+@Serializable
+data class StepInterviewPayload(
+    val jobRole: String,
+    val resumeSummary: String,
+    val skills: List<String>,
+    val lastQuestion: String,
+    val userAnswer: String,
+    val answerHistory: List<QAHistory>
+)
+@Serializable
+data class QAHistory(
+    val question: String,
+    val answer: String
+)
+
 
 
 

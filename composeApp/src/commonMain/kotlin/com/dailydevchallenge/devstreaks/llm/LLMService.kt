@@ -3,6 +3,8 @@ package com.dailydevchallenge.devstreaks.llm
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
+import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
+import com.dailydevchallenge.devstreaks.model.InterviewStepResult
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
 
@@ -39,6 +41,18 @@ interface LLMService {
     fun pickPdfAndExtractText(onExtracted: (String) -> Unit) {
         PlatformUtils.pickPdfAndExtract(onExtracted)
     }
+    suspend fun startInterviewSession(
+        role: String,
+        resumeSummary: String,
+        skills: List<String>
+    ): InterviewStepResult
+
+    suspend fun submitInterviewAnswer(
+        answer: String,
+        previousQuestion: InterviewQuestion,
+        context: InterviewSessionContext
+    ): InterviewStepResult
+
 
 
 
