@@ -12,6 +12,7 @@ object UserPreferences {
     private const val KEY_REMINDER_MINUTE = "reminder_minute"
 
 
+
     private val settings: Settings = Settings()
 
     fun setLoggedIn(loggedIn: Boolean) {

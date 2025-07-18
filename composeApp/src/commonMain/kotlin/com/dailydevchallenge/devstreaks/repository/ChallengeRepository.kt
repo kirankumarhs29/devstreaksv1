@@ -3,7 +3,6 @@ package com.dailydevchallenge.devstreaks.repository
 import com.dailydevchallenge.database.ChallengePathQueries
 import com.dailydevchallenge.database.UserProfileQueries
 import com.dailydevchallenge.database.UserProgress
-import com.dailydevchallenge.devstreaks.database.*
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.ChallengePath
 import com.dailydevchallenge.devstreaks.utils.generateUUID
@@ -16,6 +15,8 @@ import com.dailydevchallenge.devstreaks.model.ChallengePathWithTasks
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
 import com.dailydevchallenge.devstreaks.model.TaskReflection
+import com.dailydevchallenge.devstreaks.sync.PlatformSync
+
 
 class ChallengeRepository(
     private val pathQueries: ChallengePathQueries,
@@ -106,6 +107,14 @@ class ChallengeRepository(
             completedTaskId = taskId,
             completedDate = today
         )
+        PlatformSync.uploadUserProgress(
+            UserProgress(
+                id = generateUUID(), // same id used above
+                userId = userId,
+                completedTaskId = taskId,
+                completedDate = today
+            )
+        )
 
         val currentStats = pathQueries.selectUserStats().executeAsOneOrNull()
         val yesterday = LocalDate.parse(today).minus(1, DateTimeUnit.DAY).toString()
@@ -190,6 +199,7 @@ class ChallengeRepository(
             pathId = entry.pathId,
             completedDate = entry.completedDate
         )
+        PlatformSync.uploadCompletedChallenge(entry)
     }
     suspend fun saveTaskReflection(reflection: TaskReflection) = withContext(Dispatchers.Default) {
         pathQueries.insertTaskReflection(
@@ -198,6 +208,7 @@ class ChallengeRepository(
             reflection = reflection.reflection,
             timestamp = reflection.timestamp
         )
+        PlatformSync.uploadReflection(reflection)
     }
 
     private suspend fun getAllCompletedChallenges(): List<CompletedChallenge> = withContext(Dispatchers.Default) {

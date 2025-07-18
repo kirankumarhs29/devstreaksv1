@@ -135,4 +135,8 @@ class OnboardingViewModel(
     fun onCleared() {
         viewModelScope.cancel()
     }
+    fun markOnboardingComplete() {
+        // Save to datastore or preferences
+        profilePreferences.setOnboardingCompleted(true)
+    }
 }

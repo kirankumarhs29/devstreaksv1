@@ -40,18 +40,23 @@ kotlin {
         ios.deploymentTarget = "16.0"
         name = "Devstreaks"
         podfile = project.file("../iosApp/Podfile")
+//        val firebaseSdkVersion = "10.18.0"
         pod("FirebaseCore"){
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
         pod("FirebaseAuth"){
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
-        pod("GoogleUtilities") {
-            extraOpts += listOf("-compiler-option", "-fmodules")
-        }// Required by Firebase
+
         pod("FirebaseAnalytics"){
             extraOpts += listOf("-compiler-option", "-fmodules")
         }
+        pod("FirebaseFirestore") {
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+        pod("GoogleUtilities") {
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }// Required by Firebase
         framework {
             baseName = "Devstreaks"
             isStatic = false
@@ -90,8 +95,12 @@ kotlin {
             implementation(libs.foundation.layout)
             // Only inside androidMain
             implementation("androidx.activity:activity-compose:1.7.2")
+            implementation(libs.lottie.compose)
+//            implementation("dev.muazkadan:rive-cmp-android:0.0.5")
 //            implementation("org.apache.pdfbox:pdfbox:2.0.27")
+            implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 //            implementation(libs.accompanist.pager)
+            implementation(libs.accompanist.permissions)
 //            implementation(libs.accompanist.pager.indicators)
         }
         commonMain.dependencies {
@@ -116,10 +125,11 @@ kotlin {
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.ktor.client.logging)
 
-//            implementation(libs.lottie.compose)
             implementation(compose.foundation)
-
             implementation(libs.calf.file.picker)
+//            implementation("dev.muazkadan:rive-cmp:0.0.5")
+
+
 
 
         }
@@ -128,6 +138,9 @@ kotlin {
             implementation(libs.sqldelight.ios)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+//            implementation("dev.muazkadan:rive-cmp-iosarm64:0.0.5")
+//            implementation("dev.muazkadan:rive-cmp-iosx64:0.0.5")
+
 
         }
         commonTest.dependencies {
@@ -148,7 +161,15 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1"
+            )
         }
     }
     buildTypes {

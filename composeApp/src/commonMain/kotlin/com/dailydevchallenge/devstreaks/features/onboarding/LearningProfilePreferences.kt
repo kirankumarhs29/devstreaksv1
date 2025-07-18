@@ -74,6 +74,16 @@ object LearningProfilePreferences {
             fear = fear
         )
     }
+    fun isOnboardingCompleted(): Boolean {
+        return settings.getBoolean("onboarding_completed", false)
+    }
+    fun setOnboardingCompleted(completed: Boolean) {
+        settings.putBoolean("onboarding_completed", completed)
+    }
+    fun clearOnboarding() {
+        settings.remove("onboarding_completed")
+        clearProfile()
+    }
 
 
 

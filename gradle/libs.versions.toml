@@ -1,5 +1,6 @@
 [versions]
 accompanistPager = "0.34.0"
+accompanistPermissions = "0.37.3"
 agp = "8.8.0"
 android-compileSdk = "35"
 android-minSdk = "25"
@@ -102,6 +103,7 @@ firebaseCrashlyticsKtx = "19.4.4"
 
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPager" }
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }

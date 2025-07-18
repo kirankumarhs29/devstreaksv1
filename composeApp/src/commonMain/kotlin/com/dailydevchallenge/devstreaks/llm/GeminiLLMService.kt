@@ -15,6 +15,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
+import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
+import com.dailydevchallenge.devstreaks.model.InterviewStepResult
+import com.dailydevchallenge.devstreaks.model.QAHistory
+import com.dailydevchallenge.devstreaks.model.StepInterviewPayload
+import com.dailydevchallenge.devstreaks.model.StartInterviewPayload
 import kotlinx.serialization.builtins.ListSerializer
 
 
@@ -267,7 +272,11 @@ class GeminiLLMService(
             }
             val body = response.bodyAsText()
             logger.d("Resume analysis response: $body")
-            jsonFormatter.decodeFromString(ResumeAnalysis.serializer(), body)
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                jsonFormatter.decodeFromString(ResumeAnalysis.serializer(), body)
+            }
         } catch (e: Exception) {
             logger.e("Failed to parse resume analysis", e)
             throw e
@@ -296,7 +305,11 @@ class GeminiLLMService(
             }
             val body = response.bodyAsText()
             logger.d("Interview questions raw JSON: $body")
-            jsonFormatter.decodeFromString(ListSerializer(InterviewQuestion.serializer()), body)
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                jsonFormatter.decodeFromString(ListSerializer(InterviewQuestion.serializer()), body)
+            }
         } catch (e: Exception) {
             logger.e("Failed to parse interview questions", e)
             throw e
@@ -307,8 +320,68 @@ class GeminiLLMService(
     override fun pickPdfAndExtractText(onExtracted: (String) -> Unit) {
         PlatformUtils.pickPdfAndExtract(onExtracted)
     }
+    override suspend fun startInterviewSession(
+        role: String,
+        resumeSummary: String,
+        skills: List<String>
+    ): InterviewStepResult {
+        logger.i("Starting interview session for role: $role")
+        val payload = StartInterviewPayload(
+            jobRole = role,
+            resumeSummary = resumeSummary,
+            skills = skills
+        )
+        return try {
+            val response = retryWithBackoff {
+                client.post("https://us-central1-devsteaks.cloudfunctions.net/startInterviewSession") {
+                    contentType(ContentType.Application.Json)
+                    setBody(payload)
+                }
+            }
+            val body = response.bodyAsText()
+            logger.d("Start interview session raw response: $body")
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                jsonFormatter.decodeFromString(InterviewStepResult.serializer(), body)
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to start interview session", e)
+            throw e
+        }
+    }
 
-
-
+    override suspend fun submitInterviewAnswer(
+        answer: String,
+        previousQuestion: InterviewQuestion,
+        context: InterviewSessionContext
+    ): InterviewStepResult {
+        logger.i("Submitting interview answer for question: ${previousQuestion.question}")
+        val payload = StepInterviewPayload(
+            jobRole = context.jobRole,
+            resumeSummary = context.resumeSummary,
+            skills = context.skills,
+            lastQuestion = previousQuestion.question,
+            userAnswer = answer,
+            answerHistory = context.answerHistory.map { QAHistory(it.first, it.second) })
+        return try {
+            val response = retryWithBackoff {
+                client.post("https://us-central1-devsteaks.cloudfunctions.net/stepInterview") {
+                    contentType(ContentType.Application.Json)
+                    setBody(payload)
+                }
+            }
+            val body = response.bodyAsText()
+            logger.d("Step interview raw response: $body")
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                jsonFormatter.decodeFromString(InterviewStepResult.serializer(), body)
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to process interview step", e)
+            throw e
+        }
+    }
 
 }

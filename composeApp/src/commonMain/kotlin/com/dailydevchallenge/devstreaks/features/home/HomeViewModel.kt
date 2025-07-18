@@ -1,6 +1,8 @@
 package com.dailydevchallenge.devstreaks.features.home
 
 
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import com.dailydevchallenge.devstreaks.llm.LLMService
 
 
@@ -52,6 +54,22 @@ class HomeViewModel(
 
     private val _devCoachInsights = MutableStateFlow("You're improving in quizzes! Keep the momentum.")
     val devCoachInsights: StateFlow<String> = _devCoachInsights.asStateFlow()
+        private val _onboardingCompleted = mutableStateOf(false)
+    val onboardingCompleted: State<Boolean> get() = _onboardingCompleted
+
+    init {
+        viewModelScope.launch {
+            _onboardingCompleted.value = profilePreferences.isOnboardingCompleted()
+        }
+    }
+
+    fun setOnboardingCompleted(value: Boolean) {
+        _onboardingCompleted.value = value
+        profilePreferences.setOnboardingCompleted(value) // save persistently
+    }
+
+
+
 
 
     val challengeProgress: StateFlow<Pair<Int, Int>> = combine(
@@ -163,6 +181,11 @@ class HomeViewModel(
             _quickPractice.value = task
         }
     }
+//    fun markOnboardingComplete() {
+//        // Save to datastore or preferences
+//        profilePreferences.setOnboardingCompleted(true)
+//    }
+
 
 
 

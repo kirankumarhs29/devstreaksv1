@@ -6,6 +6,8 @@ import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePrefe
 import com.dailydevchallenge.devstreaks.notification.AndroidNotificationScheduler
 import com.dailydevchallenge.devstreaks.notification.NotificationScheduler
 import com.dailydevchallenge.devstreaks.notification.getNotificationScheduler
+import com.dailydevchallenge.devstreaks.tts.AndroidSpeechToTextHelper
+import com.dailydevchallenge.devstreaks.tts.SpeechToTextHelper
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import org.koin.dsl.module
@@ -20,6 +22,7 @@ fun platformModule(appContext: Context) = module {
         )
     }
     single { LearningProfilePreferences }
+    single<SpeechToTextHelper> { AndroidSpeechToTextHelper(get()) }
 
 
 }
