@@ -1,11 +1,14 @@
 package com.dailydevchallenge.devstreaks
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,6 +18,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.firebase.FirebaseApp
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.dailydevchallenge.devstreaks.session.initSessionManager
 import com.dailydevchallenge.devstreaks.settings.DarkModeSettings
 import com.dailydevchallenge.devstreaks.settings.initSettings
@@ -26,6 +31,16 @@ import org.koin.compose.KoinContext
 
 
 class MainActivity : ComponentActivity() {
+    private val micPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(this, "Microphone permission granted", Toast.LENGTH_SHORT).show()
+            // You can now use SpeechRecognizer, etc.
+        } else {
+            Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +64,10 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
         }
+        // request microphone permission for all Android versions
+        // This is needed for voice input in the app
+        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+
         val launchDestination = intent?.getStringExtra("navigateTo")
        // getLogger().d("MainActivity", "MainActivity created!")
 

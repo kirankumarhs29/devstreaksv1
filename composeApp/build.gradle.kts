@@ -100,6 +100,7 @@ kotlin {
 //            implementation("org.apache.pdfbox:pdfbox:2.0.27")
             implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 //            implementation(libs.accompanist.pager)
+            implementation(libs.accompanist.permissions)
 //            implementation(libs.accompanist.pager.indicators)
         }
         commonMain.dependencies {
@@ -127,6 +128,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(libs.calf.file.picker)
 //            implementation("dev.muazkadan:rive-cmp:0.0.5")
+
 
 
 
