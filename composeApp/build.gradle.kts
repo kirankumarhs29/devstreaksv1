@@ -127,7 +127,11 @@ kotlin {
 
             implementation(compose.foundation)
             implementation(libs.calf.file.picker)
-//            implementation("dev.muazkadan:rive-cmp:0.0.5")
+            implementation(libs.alexzhirkevich.compottie)
+//            implementation(libs.compottie.dot)
+//            implementation(libs.compottie.network)
+
+
 
 
 
@@ -191,6 +195,10 @@ dependencies {
     implementation(libs.androidx.runtime.android)
     implementation(compose.material)
     implementation(libs.work.runtime.ktx)
+    implementation(libs.foundation.android)
+    implementation(libs.ui.graphics.android)
+    implementation(libs.ui.android)
+    implementation(libs.ui.text.android)
 
     debugImplementation(compose.uiTooling)
     implementation(libs.androidx.foundation.android)

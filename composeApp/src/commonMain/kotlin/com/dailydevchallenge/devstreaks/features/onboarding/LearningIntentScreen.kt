@@ -18,7 +18,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
+import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
 import com.dailydevchallenge.devstreaks.utils.SafeBackHandler
 import kotlinx.coroutines.delay
@@ -27,6 +29,7 @@ import kotlinx.coroutines.launch
 fun LearningIntentScreen(
     viewModel: OnboardingViewModel,
     navController: NavController,
+    resumeChatViewModel: ResumeChatViewModel, // add this param!
     onFinish: (goal: String, skills: List<String>, experience: String, timePerDay: String, days: String, style: String, fear: String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -37,6 +40,7 @@ fun LearningIntentScreen(
     var currentInput by remember { mutableStateOf("") }
     var isTyping by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    val resumeHistory by resumeChatViewModel.resumeHistory.collectAsState()
     if (PlatformUtils.isAndroid()) {
         SafeBackHandler(enabled = true) {
             val hasUserStarted = messages.size > 1 || currentInput.isNotBlank() || isTyping
@@ -48,15 +52,34 @@ fun LearningIntentScreen(
         }
     }
 
+    var latestResume: ResumeAnalysis? = null
+    if (resumeHistory.isNotEmpty()) {
+        // Get the latest resume analysis
+        latestResume = resumeHistory.lastOrNull { it.skillsMatched.isNotEmpty() }
+    }
+
 
     LaunchedEffect(Unit) {
-        messages = listOf(
-            ChatMessage(
-                text = "👋 Hey Dev! What’s your next big learning goal?",
-                isUser = false,
-                inputType = InputType.TEXT
+        // Default greeting
+        val resumeMsg = latestResume?.let {
+            val summary = if (it.summary.isNotBlank()) "\n\nProfile summary:\n${it.summary}" else ""
+            "🤩 Welcome back! We see your profile has: " + it.skillsMatched.joinToString(", ") + summary
+        }
+        // Build messages such that input prompt is always last!
+        val baseMessages = buildList {
+            add(
+                ChatMessage(
+                    text = "👋 Hey Dev! What’s your next big learning goal?",
+                    isUser = false,
+                    inputType = InputType.TEXT
+                )
             )
-        )
+            if (resumeMsg != null) {
+                // Insert the info message right BEFORE the prompt, not after!
+                add(0, ChatMessage(text = resumeMsg, isUser = false, inputType = InputType.NONE))
+            }
+        }
+        messages = baseMessages
     }
 
     LaunchedEffect(messages.size, currentInput) {
@@ -122,6 +145,7 @@ fun LearningIntentScreen(
                                         input = currentInput,
                                         currentMessages = messages,
                                         onFinish = onFinish,
+                                        latestResume = latestResume,
                                         onUpdate = { messages = it },
                                         setTyping = { isTyping = it },
                                         viewModel = viewModel
@@ -140,6 +164,7 @@ fun LearningIntentScreen(
                             sendUserMessage(
                                 input = selected,
                                 currentMessages = messages,
+                                latestResume = latestResume,
                                 onFinish = onFinish,
                                 onUpdate = { messages = it },
                                 setTyping = { isTyping = it },
@@ -183,6 +208,7 @@ private suspend fun sendUserMessage(
     currentMessages: List<ChatMessage>,
     onFinish: (String, List<String>, String, String, String, String, String) -> Unit,
     onUpdate: (List<ChatMessage>) -> Unit,
+    latestResume: ResumeAnalysis? = null,
     setTyping: (Boolean) -> Unit,
     viewModel: OnboardingViewModel
 ) {
@@ -203,10 +229,10 @@ private suspend fun sendUserMessage(
         )
 
         2 -> ChatMessage(
-            text = "💻 What’s your coding experience level?",
+            text = "💻 What’s your coding experience level? type in Years(e.g. " +
+                    "2/3/5)",
             isUser = false,
-            inputType = InputType.MULTI_CHOICE,
-            options = listOf("Beginner", "1-2 yrs", "3+ yrs")
+            inputType = InputType.TEXT,
         )
 
         3 -> ChatMessage(
@@ -238,15 +264,24 @@ private suspend fun sendUserMessage(
         7 -> {
             val goal = userInputs.getOrNull(0) ?: ""
             val skillsRaw = userInputs.getOrNull(1) ?: ""
-            val experience = userInputs.getOrNull(2) ?: ""
+            val experienceInput = userInputs.getOrNull(2) ?: ""
             val time = userInputs.getOrNull(3) ?: ""
             val days = userInputs.getOrNull(4) ?: ""
             val style = userInputs.getOrNull(5) ?: ""
             val fear = userInputs.getOrNull(6) ?: ""
-
-            val skills = skillsRaw.split(",").map { it.trim() }
+            val userSkills = skillsRaw.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            val resumeSkills = latestResume?.skillsMatched ?: emptyList()
+            val combinedSkills = (resumeSkills + userSkills).filter { it.isNotBlank() }.distinct()
+            val resumeSummary = latestResume?.summary ?: ""
+            val completeExperience = buildString {
+                if (experienceInput.isNotBlank()) {
+                    if (resumeSummary.isNotBlank()) append(" ")
+                    append(experienceInput)
+                    if (!experienceInput.endsWith(".")) append(" years experience.")
+                }
+            }
             viewModel.markOnboardingComplete()
-            onFinish(goal, skills, experience, time, days, style, fear)
+            onFinish(goal, combinedSkills, completeExperience, time, days, style, fear)
 
 
             ChatMessage(

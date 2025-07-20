@@ -13,6 +13,7 @@ private lateinit var appContext: Context
 fun initSessionManager(context: Context) {
     appContext = context.applicationContext
 }
+fun getAppContext(): Context = appContext
 
 actual fun getSessionManager(): SessionManager = AndroidSessionManager(appContext)
 

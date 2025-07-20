@@ -98,15 +98,21 @@ data class UserLearningHistory(
 )
 
 @Serializable
-//data class InterviewQuestion(
-//    val question: String,
-//    val type: String,
-//    val expectedAnswer: String = "",
-//    val followUp: String = ""
-//)
-data class InterviewQuestion(
+data class RemoteInterviewQuestion(
+    val type: String,
     val question: String,
+    val topic: String = "",
+    val difficulty: Int = 0,
     val followUp: String = ""
+)
+@Serializable
+data class InterviewQuestion(
+    val id: String,                // Add this!
+    val question: String,
+    val topic: String = "",        // for adaptivity/personalization (optional)
+    val difficulty: Int = 0,       // add if using for adaptive learning
+    val followUp: String = ""
+
 )
 
 @Serializable
@@ -115,6 +121,16 @@ data class InterviewStepResult(
     val feedback: String?, // Feedback/critique for user's last answer
     val done: Boolean // true if interview complete
 )
+data class ResumeAnalysisModel(
+    val id: String,
+    val userId: String,
+    val resumeText: String,
+    val skillsMatched: List<String>,
+    val skillsMissing: List<String>,
+    val recommendations: String,
+    val createdAt: Long
+)
+
 
 @Serializable
 data class InterviewSessionContext(
@@ -125,12 +141,24 @@ data class InterviewSessionContext(
 )
 @Serializable
 data class ResumeAnalysis(
+    val id: String,                 // Add this!
+    val userId: String,
     val summary: String,
     val skillsMatched: List<String>,
     val skillsMissing: List<String>,
-    val jobMatchScore: Int, // out of 100
+    val jobMatchScore: Long, // out of 100
+    val recommendations: String,
+    val createdAt: Long             // For sorting/history
+)
+@Serializable
+data class RemoteResumeAnalysis(
+    val summary: String,
+    val skillsMatched: List<String>,
+    val skillsMissing: List<String>,
+    val jobMatchScore: Int,
     val recommendations: String
 )
+
 
 @Serializable
 data class StartInterviewPayload(
@@ -152,6 +180,24 @@ data class QAHistory(
     val question: String,
     val answer: String
 )
+data class UserAnswer(
+    val id: String,                  // Add this!
+    val questionId: String,
+    val sessionId: String,
+    val answerText: String,
+    val feedback: String? = null,
+    val score: Int? = null,
+    val topic: String? = null, // <- required for adaptation!
+    val timestamp: Long
+)
+
+@Serializable
+data class RemoteInterviewStepResult(
+    val question: RemoteInterviewQuestion? = null,
+    val feedback: String? = null,
+    val done: Boolean
+)
+
 
 
 

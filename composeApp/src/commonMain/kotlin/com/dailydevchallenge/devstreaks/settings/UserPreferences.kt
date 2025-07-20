@@ -10,6 +10,7 @@ object UserPreferences {
     private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
     private const val KEY_REMINDER_HOUR = "reminder_hour"
     private const val KEY_REMINDER_MINUTE = "reminder_minute"
+    private const val latestResumeAnalysis = "resume_analysis_id"
 
 
 
@@ -56,6 +57,9 @@ object UserPreferences {
     }
     fun getSafeUserId(): String {
         return getUserId() ?: throw IllegalStateException("User ID not found in preferences")
+    }
+    fun getGetLatestResume(): String? {
+        return settings.getStringOrNull(latestResumeAnalysis)
     }
 
 }

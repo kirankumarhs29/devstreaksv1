@@ -3,6 +3,7 @@ package com.dailydevchallenge.devstreaks.llm
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
+import com.dailydevchallenge.devstreaks.model.RemoteResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import io.ktor.client.*
@@ -18,9 +19,15 @@ import com.dailydevchallenge.devstreaks.model.InterviewQuestion
 import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
 import com.dailydevchallenge.devstreaks.model.InterviewStepResult
 import com.dailydevchallenge.devstreaks.model.QAHistory
+import com.dailydevchallenge.devstreaks.model.RemoteInterviewQuestion
+import com.dailydevchallenge.devstreaks.model.RemoteInterviewStepResult
 import com.dailydevchallenge.devstreaks.model.StepInterviewPayload
 import com.dailydevchallenge.devstreaks.model.StartInterviewPayload
+import com.dailydevchallenge.devstreaks.utils.generateUUID
+import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
+// userPreferences
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
 
 
 private val jsonFormatter = Json {
@@ -275,7 +282,17 @@ class GeminiLLMService(
             if (body.trim().startsWith("<")) {
                 throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
             } else {
-                jsonFormatter.decodeFromString(ResumeAnalysis.serializer(), body)
+                val apiResult = jsonFormatter.decodeFromString(RemoteResumeAnalysis.serializer(), body)
+                ResumeAnalysis(
+                    id = generateUUID(),
+                    userId = UserPreferences.getSafeUserId(), // or whichever user id you use
+                    summary = apiResult.summary,
+                    skillsMatched = apiResult.skillsMatched,
+                    skillsMissing = apiResult.skillsMissing,
+                    jobMatchScore = apiResult.jobMatchScore.toLong(),
+                    recommendations = apiResult.recommendations,
+                    createdAt = Clock.System.now().toEpochMilliseconds()
+                )
             }
         } catch (e: Exception) {
             logger.e("Failed to parse resume analysis", e)
@@ -343,7 +360,22 @@ class GeminiLLMService(
             if (body.trim().startsWith("<")) {
                 throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
             } else {
-                jsonFormatter.decodeFromString(InterviewStepResult.serializer(), body)
+                val apiResult = jsonFormatter.decodeFromString(
+                    RemoteInterviewStepResult.serializer(),
+                    body)
+                InterviewStepResult(
+                    question = apiResult.question?.let { remoteQ ->
+                        InterviewQuestion(
+                            id = generateUUID(),
+                            question = remoteQ.question,
+                            topic = remoteQ.topic,
+                            difficulty = remoteQ.difficulty,
+                            followUp = remoteQ.followUp
+                        )
+                    },
+                    feedback = apiResult.feedback,
+                    done = apiResult.done
+                )
             }
         } catch (e: Exception) {
             logger.e("Failed to start interview session", e)
@@ -376,7 +408,20 @@ class GeminiLLMService(
             if (body.trim().startsWith("<")) {
                 throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
             } else {
-                jsonFormatter.decodeFromString(InterviewStepResult.serializer(), body)
+                val apiResult = jsonFormatter.decodeFromString(RemoteInterviewStepResult.serializer(), body)
+                InterviewStepResult(
+                    question = apiResult.question?.let { remoteQ ->
+                        InterviewQuestion(
+                            id = generateUUID(), // Always assign ID on the client!
+                            question = remoteQ.question,
+                            topic = remoteQ.topic,
+                            difficulty = remoteQ.difficulty,
+                            followUp = remoteQ.followUp
+                        )
+                    },
+                    feedback = apiResult.feedback,
+                    done = apiResult.done
+                )
             }
         } catch (e: Exception) {
             logger.e("Failed to process interview step", e)

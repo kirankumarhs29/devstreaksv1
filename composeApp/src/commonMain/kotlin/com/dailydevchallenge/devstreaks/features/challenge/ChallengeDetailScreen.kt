@@ -11,13 +11,105 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.dailydevchallenge.devstreaks.features.challenge.components.ActivityPager
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
-import com.dailydevchallenge.devstreaks.features.challenge.components.ActivitySection
+import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
-import com.dailydevchallenge.devstreaks.model.effectiveChallenges
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import kotlinx.coroutines.launch
+
+// 1. DATA MODEL (Extend if needed)
+data class ActivityPagerItem(
+    val id: String,
+    val type: String, // "quiz", "code", "flashcard", "project", "why", "tip", "bonus", "aiBreakdown", etc.
+    val content: String? = null,
+    val challenge: ChallengeActivity? = null // Optional, for quiz or code challenges
+    // ...other fields if needed (quiz options, correctAns, etc.)
+)
+
+// 2. COMPONENTS FOR INSIGHT CARDS
+@Composable
+fun WhyItMattersCard(content: String) {
+    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.tertiaryContainer)) {
+        Column(Modifier.padding(14.dp)) {
+            Text("💡 Why this matters", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(content, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+fun TipCard(content: String) {
+    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer)) {
+        Column(Modifier.padding(14.dp)) {
+            Text("✨ Tip", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(content, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+fun BonusCard(content: String) {
+    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)) {
+        Column(Modifier.padding(14.dp)) {
+            Text("🎁 Bonus", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(content, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+fun AIBreakdownCard(content: String) {
+    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.padding(14.dp)) {
+            Text("🤖 AI Breakdown", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(content, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+// 3. NARRATIVE HERO & REFLECTION
+//@Composable
+//fun EngagingHero(day: ChallengeTask) {
+//    Card(
+//        modifier = Modifier.fillMaxWidth(),
+//        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)
+//    ) {
+//        Column(Modifier.padding(16.dp)) {
+//            Text(
+//                day.title, style = MaterialTheme.typography
+//                .titleLarge, fontWeight = FontWeight.Bold)
+//            Spacer(Modifier.height(6.dp))
+//            day.storyIntro?.let { Text(it, style = MaterialTheme.typography.bodyLarge); Spacer(Modifier.height(8.dp)) }
+//            Text("⭐ XP: ${day.xp}    🧩 ${day.type}", style = MaterialTheme.typography.labelSmall)
+//            day.tomorrowTeaser?.let {
+//                Spacer(Modifier.height(10.dp))
+//                Text("Tomorrow: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+//            }
+//        }
+//    }
+//}
+
+@Composable
+fun ReflectionCard(reflectionPrompt: String?) {
+    reflectionPrompt?.let {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text("📝 Reflect", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
 
 @Composable
 fun ChallengeDetailScreen(
@@ -65,14 +157,20 @@ fun ChallengeDetailScreen(
                     started = true
                 }
             } else {
-                val fallbackChallenges = day.effectiveChallenges()
-                logger.d("ActivitySection shown for day ${day.day}, viewedIds=${viewedIds.size}")
-                ActivitySection(fallbackChallenges) { id ->
-                    if (id !in viewedIds) {
-                        logger.d("Challenge viewed: $id for day ${day.day}")
-                        viewedIds.add(id)
-                    }
+//                val fallbackChallenges = day.effectiveChallenges()
+//                logger.d("ActivitySection shown for day ${day.day}, viewedIds=${viewedIds.size}")
+//                ActivityPager(fallbackChallenges) { id ->
+//                    if (id !in viewedIds) {
+//                        logger.d("Challenge viewed: $id for day ${day.day}")
+//                        viewedIds.add(id)
+//                    }
+//                }
+                val items: List<ActivityPagerItem> = buildFullPagerList(day)
+                ActivityPager(items) { id -> if (id !in viewedIds) viewedIds.add(id) }
+                if (allDone && day.aiBreakdown != null) {
+                    ReflectionCard(day.aiBreakdown)
                 }
+            }
             }
 
             if (allDone && !isCompleted) {
@@ -105,6 +203,39 @@ fun ChallengeDetailScreen(
                 logger.d("OverviewInsights shown for day ${day.day}")
                 OverviewInsights(day)
             }
+        }
+    }
+// 4. UTILITY FUNCTIONS
+
+fun getInjectedInsights(day: ChallengeTask): List<ActivityPagerItem> {
+    val insightCards = mutableListOf<ActivityPagerItem>()
+    day.whyItMatters?.let { insightCards += ActivityPagerItem("why", "why", it ) }
+    day.tip?.let       { insightCards += ActivityPagerItem("tip", "tip", it) }
+    day.bonus?.let     { insightCards += ActivityPagerItem("bonus", "bonus", it) }
+    day.aiBreakdown?.let { insightCards += ActivityPagerItem("aiBreakdown", "aiBreakdown", it) }
+    return insightCards
+}
+
+fun buildFullPagerList(day: ChallengeTask): List<ActivityPagerItem> {
+    // Mix insights into the flow (e.g., at the start and between activities)
+    val insights = getInjectedInsights(day)
+    val activities = day.challenges.map {
+        ActivityPagerItem(
+            id = it.id,
+            type = it.type.toString(),
+            content = it.prompt ,// or whatever field matches quiz code
+            challenge = it
+        )
+    }
+
+    // Interleave: why before 1st activity, tip after 1st, bonus after 2nd, ai after 3rd (if present)
+    return buildList {
+        var i = 0
+        if (insights.isNotEmpty()) add(insights[0])
+        for (a in activities) {
+            add(a)
+            i++
+            if (i < insights.size) add(insights[i])
         }
     }
 }

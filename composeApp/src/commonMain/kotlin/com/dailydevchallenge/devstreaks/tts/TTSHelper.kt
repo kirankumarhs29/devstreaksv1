@@ -11,3 +11,8 @@ interface SpeechToTextHelper {
     fun stopListening()
     val isListening: Boolean
 }
+
+interface ConfettiSoundPlayer {
+    fun play()
+}
+expect fun getConfettiSoundPlayer(): ConfettiSoundPlayer

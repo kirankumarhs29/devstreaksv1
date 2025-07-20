@@ -131,18 +131,18 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
             }
 
             val onboardingCompleted by viewModel.onboardingCompleted
-            if (onboardingCompleted) {
+//            if (!onboardingCompleted) {
                 item {
                     WelcomeHeroCard(
                         stats = stats1,
                         onStartClick = {
-                            viewModel.setOnboardingCompleted(true)
+//                            viewModel.setOnboardingCompleted(true)
                             navController.navigate(Routes.LearningIntent)
                         },
                         onBoardingCompleted = onboardingCompleted
                     )
                 }
-            }
+//            }
              if (today != null) {
                     item {
                         HeroBanner(task = today!!) {

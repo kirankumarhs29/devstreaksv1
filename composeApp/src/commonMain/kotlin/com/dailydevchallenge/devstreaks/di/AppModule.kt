@@ -62,6 +62,6 @@ val appModule = module {
             userId = userId
         )
     }
-    single { ResumeChatViewModel(get()) }
+    single { ResumeChatViewModel(get(), get(), get()) }
 
 }

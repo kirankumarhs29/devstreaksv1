@@ -119,6 +119,7 @@ fun MainScaffold(
                     LearningIntentScreen(
                         viewModel = onboardingViewModel,
                         navController = navController,
+                        resumeChatViewModel = koinInject(),
                         onFinish = { goal, skills, experience, time, days, style, fear ->
                             coroutineScope.launch {
                                 logger.log("Learning Intent submitted: $goal, $skills, $experience, $time, $days, $style, $fear")
