@@ -28,7 +28,8 @@ data class GenerateCourseRequest(
     val timePerDay: Int,
     val days: Int,
     val style: String,
-    val fear: String
+    val fear: String,
+    val requestId: String
 )
 
 sealed class ChatUIMessage {

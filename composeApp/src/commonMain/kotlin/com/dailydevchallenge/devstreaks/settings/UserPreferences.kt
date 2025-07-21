@@ -3,6 +3,8 @@ package com.dailydevchallenge.devstreaks.settings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import com.russhwolf.settings.set
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 object UserPreferences {
     private const val KEY_IS_LOGGED_IN = "is_logged_in"
@@ -11,8 +13,8 @@ object UserPreferences {
     private const val KEY_REMINDER_HOUR = "reminder_hour"
     private const val KEY_REMINDER_MINUTE = "reminder_minute"
     private const val latestResumeAnalysis = "resume_analysis_id"
-
-
+    // store pending request for course Gemini or OpenAI
+    private const val KEY_PENDING_REQUEST = "pending_request"
 
     private val settings: Settings = Settings()
 
@@ -60,6 +62,31 @@ object UserPreferences {
     }
     fun getGetLatestResume(): String? {
         return settings.getStringOrNull(latestResumeAnalysis)
+    }
+    fun savePendingRequest(request: String) {
+        settings[KEY_PENDING_REQUEST] = request
+    }
+    fun getPendingRequest(): String? {
+        return settings.getStringOrNull(KEY_PENDING_REQUEST)
+    }
+    fun savePendingRequestId(requestId: String) {
+        val currentRequest = getPendingRequest() ?: ""
+        settings[KEY_PENDING_REQUEST] = "$currentRequest/$requestId"
+    }
+    fun getPendingRequestId(): String? {
+        val raw = settings.getStringOrNull(KEY_PENDING_REQUEST) ?: return null
+        return try {
+            kotlinx.serialization.json.Json.parseToJsonElement(raw)
+                .jsonObject["requestId"]?.jsonPrimitive?.content
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+
+    fun clearPendingRequest() {
+        settings.remove(KEY_PENDING_REQUEST)
     }
 
 }

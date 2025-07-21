@@ -240,7 +240,8 @@ fun MainScaffold(
                 }
                 composable(Routes.ResumeAnalysis) {
                     ResumeAndInterviewScreen(
-                        resumeChatViewModel
+                        resumeChatViewModel,
+                        navController
                     )
                 }
 

@@ -1,6 +1,7 @@
 package com.dailydevchallenge.devstreaks.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.KeepGeneratedSerializer
 
 
 // ChallengeTask.kt
@@ -14,7 +15,6 @@ data class ChallengeTask(
     val content: String, // Overall summary or context
     val xp: Int,
     val checklist: List<String> = emptyList(),
-
     val whyItMatters: String? = null,
     val bonus: String? = null,
     val tip: String? = null,
@@ -39,7 +39,6 @@ fun ChallengeTask.effectiveChallenges(): List<ChallengeActivity> {
 }
 
 
-
 @Serializable
 data class ChallengeActivity(
     val id: String,
@@ -50,8 +49,8 @@ data class ChallengeActivity(
     val language: String? = null,
     val starterCode: String? = null,
     val explanation: String? = null,
-    val solutionCode: String? = null, // ✅ Add this line
-    val videoUrl: String? = null //
+    val solutionCode: String? = null,
+    val videoUrl: String? = null
 )
 
 @Serializable
@@ -119,7 +118,8 @@ data class InterviewQuestion(
 data class InterviewStepResult(
     val question: InterviewQuestion?, // null when finished
     val feedback: String?, // Feedback/critique for user's last answer
-    val done: Boolean // true if interview complete
+    val score: Int? = null,
+    val done: Boolean
 )
 data class ResumeAnalysisModel(
     val id: String,
@@ -195,7 +195,8 @@ data class UserAnswer(
 data class RemoteInterviewStepResult(
     val question: RemoteInterviewQuestion? = null,
     val feedback: String? = null,
-    val done: Boolean
+    val score: Int? = null,  // Add this
+    val done: Boolean = false, // Add default value
 )
 
 

@@ -1,9 +1,6 @@
 // androidMain
 package com.dailydevchallenge.devstreaks.sync
 
-import com.dailydevchallenge.database.CompletedChallenge
-import com.dailydevchallenge.database.TaskReflection
-import com.dailydevchallenge.database.UserProgress
 import com.google.firebase.firestore.FirebaseFirestore
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 

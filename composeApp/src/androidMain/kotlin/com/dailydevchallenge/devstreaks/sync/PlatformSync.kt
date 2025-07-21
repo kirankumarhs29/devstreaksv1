@@ -2,6 +2,7 @@ package com.dailydevchallenge.devstreaks.sync
 
 // platform/PlatformSync.android.kt
 import com.dailydevchallenge.database.UserProgress
+import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
 import com.dailydevchallenge.devstreaks.model.TaskReflection
 
@@ -16,5 +17,8 @@ actual object PlatformSync {
 
     actual suspend fun uploadReflection(reflection: TaskReflection) {
         FirestoreHelper.uploadReflection(reflection)
+    }
+    actual suspend fun fetchGeneratedCourse(requestId: String): ChallengePathResponse? {
+        return FirestoreHelper.fetchGeneratedCourse(requestId)
     }
 }

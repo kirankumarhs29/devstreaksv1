@@ -16,7 +16,8 @@ interface LLMService {
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String,
     ): ChallengePathResponse
 
     suspend fun generateQuickPractice(skills: List<String>): ChallengeTask
@@ -29,6 +30,7 @@ interface LLMService {
         days: Int,
         style: String,
         fear: String,
+        requestId: String,
         useOpenAI: Boolean = false
     ): ChallengePathResponse
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences
+import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import kotlinx.datetime.*
 
@@ -56,6 +57,30 @@ class HomeViewModel(
     val devCoachInsights: StateFlow<String> = _devCoachInsights.asStateFlow()
         private val _onboardingCompleted = mutableStateOf(false)
     val onboardingCompleted: State<Boolean> get() = _onboardingCompleted
+    private val _generatedCourse = MutableStateFlow<ChallengePathResponse?>(null)
+    val generatedCourse: StateFlow<ChallengePathResponse?> = _generatedCourse.asStateFlow()
+
+    private val _isCourseLoading = MutableStateFlow(false)
+    val isCourseLoading: StateFlow<Boolean> = _isCourseLoading.asStateFlow()
+
+    fun loadGeneratedCourse(requestId: String) {
+        viewModelScope.launch {
+            _isCourseLoading.value = true
+            try {
+                val course = repository.fetchGeneratedCourse(requestId)
+                _generatedCourse.value = course
+                if (course != null) {
+                    repository.savePathToDb(course)
+                    UserPreferences.clearPendingRequest()
+                }
+            } catch (e: Exception) {
+                println("Error loading generated course: ${e.message}")
+            } finally {
+                _isCourseLoading.value = false
+            }
+        }
+    }
+
 
     init {
         viewModelScope.launch {

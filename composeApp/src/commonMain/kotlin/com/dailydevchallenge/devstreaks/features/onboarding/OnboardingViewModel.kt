@@ -6,6 +6,12 @@ import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import com.dailydevchallenge.devstreaks.notification.getNotificationScheduler
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
+import com.dailydevchallenge.devstreaks.utils.generateUUID
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 
 
 class OnboardingViewModel(
@@ -50,6 +56,18 @@ class OnboardingViewModel(
 
         try {
             profilePreferences.saveProfile(profile)
+            val requestId = generateUUID()
+            val requestPayload = buildJsonObject {
+                put("requestId", requestId)
+                put("goal", profile.goal)
+                put("skills", Json.encodeToJsonElement(profile.skills))
+                put("experience", profile.experience)
+                put("timePerDay", profile.timePerDay)
+                put("days", profile.days)
+                put("style", profile.style)
+                put("fear", profile.fear)
+            }
+            UserPreferences.savePendingRequest(requestPayload.toString())
             val generated = llmService.generatePlan(
                 goal = profile.goal,
                 skills = profile.skills,
@@ -58,6 +76,7 @@ class OnboardingViewModel(
                 days = profile.days.toIntOrNull() ?: 7, // Default to 7 days if not provided
                 style = profile.style,
                 fear = profile.fear,
+                requestId = requestId,
                 useOpenAI = true // Set to true to use OpenAI, false for Gemini
             )
             challengeRepository.savePathToDb(generated)

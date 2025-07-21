@@ -15,6 +15,7 @@ androidx-espresso = "3.6.1"
 androidx-lifecycle = "2.9.0"
 androidx-testExt = "1.2.1"
 androidxNavigationCompose = "2.7.7"
+annotation = "1.9.1"
 calfFilePicker = "0.8.0"
 composeMultiplatform = "1.8.1"
 composeNavigation = "1.0.0-alpha04"
@@ -100,6 +101,7 @@ playServicesMeasurementApi = "22.5.0"
 activityKtx = "1.10.1"
 firebaseMessagingKtx = "24.1.2"
 firebaseCrashlyticsKtx = "19.4.4"
+annotationJvm = "1.9.1"
 
 
 [libraries]
@@ -109,6 +111,7 @@ accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pa
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 airbnb-lottie-compose = { module = "com.airbnb.lottie:lottie-compose", version.ref = "lottieComposeVersion" }
 alexzhirkevich-compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottieVersion" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
@@ -221,6 +224,7 @@ play-services-measurement-api = { group = "com.google.android.gms", name = "play
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 google-firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
+androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

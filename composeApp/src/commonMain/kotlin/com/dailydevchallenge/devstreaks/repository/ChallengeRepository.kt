@@ -222,4 +222,9 @@ class ChallengeRepository(
             TaskReflection(it.id, it.taskId, it.reflection, it.timestamp)
         }
     }
+    // fetch generated course by requestId from Firestore
+    suspend fun fetchGeneratedCourse(requestId: String): ChallengePathResponse? {
+        return PlatformSync.fetchGeneratedCourse(requestId)
+    }
+
 }

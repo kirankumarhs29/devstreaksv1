@@ -128,6 +128,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(libs.calf.file.picker)
             implementation(libs.alexzhirkevich.compottie)
+            implementation(libs.androidx.annotation)
 //            implementation(libs.compottie.dot)
 //            implementation(libs.compottie.network)
 

@@ -68,7 +68,8 @@ class GeminiLLMService(
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String
     ): ChallengePathResponse {
         logger.d("Generating Gemini plan with goal: $goal, skills: $skills, experience: $experience, timePerDay: $timePerDay, days: $days, style: $style, fear: $fear")
         val response = retryWithBackoff {
@@ -82,7 +83,8 @@ class GeminiLLMService(
                         timePerDay = timePerDay,
                         days = days,
                         style = style,
-                        fear = fear
+                        fear = fear,
+                        requestId = requestId
                     )
                 )
 
@@ -108,13 +110,14 @@ class GeminiLLMService(
         days: Int,
         style: String,
         fear: String,
+        requestId: String,
         useOpenAI: Boolean
     ): ChallengePathResponse {
         logger.i("Generating plan using ${if (useOpenAI) "OpenAI" else "Gemini"}...")
         return if (useOpenAI) {
-            generatePlanWithOpenAI(goal, skills, experience, timePerDay, days, style, fear)
+            generatePlanWithOpenAI(goal, skills, experience, timePerDay, days, style, fear, requestId)
         } else {
-            generateGeminiPlan(goal, skills, experience, timePerDay, days, style, fear)
+            generateGeminiPlan(goal, skills, experience, timePerDay, days, style, fear, requestId)
         }
     }
 
@@ -125,7 +128,8 @@ class GeminiLLMService(
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String
     ): ChallengePathResponse {
         logger.d("Generating OpenAI plan with goal: $goal, skills: $skills, experience: $experience, timePerDay: $timePerDay, days: $days, style: $style, fear: $fear")
         val response = retryWithBackoff {
@@ -139,7 +143,8 @@ class GeminiLLMService(
                         timePerDay = timePerDay,
                         days = days,
                         style = style,
-                        fear = fear
+                        fear = fear,
+                        requestId = requestId
                     )
                 )
 
@@ -271,6 +276,15 @@ class GeminiLLMService(
     override suspend fun analyzeResume(resumeText: String, jobRole: String): ResumeAnalysis {
         logger.i("Analyzing resume for role: $jobRole")
         return try {
+            require(jobRole.isNotBlank()) { "Job role cannot be blank" }
+            require(resumeText.isNotBlank()) { "Resume text cannot be blank" }
+            logger.d("Resume text length: ${resumeText.length}, job role: $jobRole")
+            // Log the first 100 characters of the resume text for debugging
+            if (resumeText.length > 100) {
+                logger.d("Resume text preview: ${resumeText.take(100)}...")
+            } else {
+                logger.d("Resume text preview: $resumeText")
+            }
             val response = retryWithBackoff {
                 client.post("https://us-central1-devsteaks.cloudfunctions.net/analyzeResume") {
                     contentType(ContentType.Application.Json)
@@ -349,6 +363,9 @@ class GeminiLLMService(
             skills = skills
         )
         return try {
+            require(role.isNotBlank()) { "Job role cannot be blank" }
+            require(resumeSummary.isNotBlank()) { "Resume summary cannot be blank" }
+            require(skills.isNotEmpty()) { "Skills list cannot be empty" }
             val response = retryWithBackoff {
                 client.post("https://us-central1-devsteaks.cloudfunctions.net/startInterviewSession") {
                     contentType(ContentType.Application.Json)

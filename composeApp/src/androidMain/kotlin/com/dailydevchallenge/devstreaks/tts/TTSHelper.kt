@@ -45,20 +45,21 @@ actual class TTSHelper actual constructor(context: Any) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     actual fun speak(text: String) {
+        val cleanedText = cleanTextForTTS(text)
         CoroutineScope(Dispatchers.Main).launch {
-            val cacheFile = audioCache[text]
+            val cacheFile = audioCache[cleanedText]
             if (cacheFile != null && cacheFile.exists()) {
                 playMp3(cacheFile)
             } else {
-                val bytes = try { fetchCloudTTS(text) } catch (_: Exception) { null }
+                val bytes = try { fetchCloudTTS(cleanedText) } catch (_: Exception) { null }
                 if (bytes != null) {
                     val tempFile = File.createTempFile("cloud_tts", ".mp3", androidContext.cacheDir)
                     tempFile.writeBytes(bytes)
-                    audioCache[text] = tempFile
+                    audioCache[cleanedText] = tempFile
                     playMp3(tempFile)
                 } else {
                     // Fallback to local TTS
-                    tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+                    tts.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, null)
                 }
             }
         }
@@ -114,9 +115,14 @@ actual class TTSHelper actual constructor(context: Any) {
             prepare()
             start()
         }
-//        player.setOnCompletionListener {
-//            it.release()
-//            tempFile.delete()
-//        }
+    }
+    fun cleanTextForTTS(text: String): String {
+        return text
+            .replace("`", "") // Remove backticks
+            .replace("*", "") // Remove asterisks
+            .replace("_", "") // Remove underscores
+            .replace(Regex("<[^>]*>"), "") // Remove HTML tags
+            .replace(Regex("\\s+"), " ") // Normalize whitespace
+            .trim()
     }
 }

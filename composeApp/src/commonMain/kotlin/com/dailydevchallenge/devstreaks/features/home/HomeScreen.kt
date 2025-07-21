@@ -38,6 +38,7 @@ import com.dailydevchallenge.devstreaks.features.challenge.components.FlashcardA
 import com.dailydevchallenge.devstreaks.features.challenge.components.QuizCard
 import com.dailydevchallenge.devstreaks.model.ActivityType
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import devstreaks.composeapp.generated.resources.Res
 import devstreaks.composeapp.generated.resources.hero_banner
 import org.jetbrains.compose.resources.painterResource
@@ -46,6 +47,8 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInject()) {
+    val requestId = remember { UserPreferences.getPendingRequestId()}
+    val isCourseLoading by viewModel.isCourseLoading.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
     val today by viewModel.todayTask.collectAsState()
     val stats by viewModel.userStats.collectAsState()
@@ -72,6 +75,12 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
     var showSheet by remember { mutableStateOf(false) }
     val quickPracticeTask by viewModel.quickPractice.collectAsState()
     var showQuickPracticeSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(requestId) {
+        if (!requestId.isNullOrEmpty()) {
+            viewModel.loadGeneratedCourse(requestId)
+        }
+    }
 
 
     Scaffold(

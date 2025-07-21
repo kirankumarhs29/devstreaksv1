@@ -132,13 +132,13 @@ fun DevCoachScreen(
                 }
 
                 items(chatMessages.reversed()) { msg ->
-                    ChatBubble(message = msg)
+                    ChatBubble1(message = msg)
                 }
 
 
                 if (isTyping) {
                     item {
-                        ChatBubble(
+                        ChatBubble1(
                             message = ChatUIMessage.Received("...") // Or a better loading effect
                         )
                     }
@@ -176,7 +176,7 @@ fun formatTimestamp(epochMillis: Long): String {
     return "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
 }
 @Composable
-fun ChatBubble(message: ChatUIMessage, isLoading: Boolean = false) {
+fun ChatBubble1(message: ChatUIMessage, isLoading: Boolean = false) {
     val isUser = message is ChatUIMessage.Sent
     val bubbleColor = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
