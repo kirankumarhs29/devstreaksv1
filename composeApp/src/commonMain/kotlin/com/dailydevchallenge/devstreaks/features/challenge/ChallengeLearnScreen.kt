@@ -7,18 +7,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 
 @Composable
 fun ChallengeLearnScreen(
     task: ChallengeTask,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    navController: NavController
 ) {
     Scaffold(
         topBar = {
             DevStreakTopBar(
-                title = "Learn: Day ${task.day}"
+                title = "Learn: Day ${task.day}",
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
     ) { padding ->

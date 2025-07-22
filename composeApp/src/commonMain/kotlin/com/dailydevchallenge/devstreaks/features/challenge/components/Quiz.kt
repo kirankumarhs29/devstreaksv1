@@ -13,7 +13,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
-import com.dailydevchallenge.devstreaks.tts.getConfettiSoundPlayer
 import devstreaks.composeapp.generated.resources.Res
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
@@ -22,12 +21,11 @@ import io.github.alexzhirkevich.compottie.*
 
 
 @Composable
-fun QuizCard(activity: ChallengeActivity, onViewed: () -> Unit) {
+fun QuizCard(activity: ChallengeActivity, onComplete: () -> Unit) {
     var selectedOption by remember { mutableStateOf<String?>(null) }
     var isSubmitted by remember { mutableStateOf(false) }
     var viewedOnce by remember { mutableStateOf(false) }
     var showConfetti by remember { mutableStateOf(false) }
-    val soundPlayer = remember { getConfettiSoundPlayer() }
     val isCorrect = selectedOption == activity.correctAnswer
 
 
@@ -56,12 +54,10 @@ fun QuizCard(activity: ChallengeActivity, onViewed: () -> Unit) {
                     onClick = {
                         isSubmitted = true
                         if (!viewedOnce) {
-                            onViewed()
                             viewedOnce = true
                         }
                         if (isCorrect) {
                             showConfetti = true
-                            soundPlayer.play()
                         }
                     },
                     enabled = selectedOption != null,
@@ -91,62 +87,16 @@ fun QuizCard(activity: ChallengeActivity, onViewed: () -> Unit) {
                         Text("Retry")
                     }
                 }
-            }
-        }
-        if (showConfetti) {
-            ConfettiDialog(
-                onDismiss = { showConfetti = false }
-            )
-        }
-    }
-}
-
-@Composable
-fun ConfettiDialog(
-    onDismiss: () -> Unit,
-    message: String = "Streak Achieved! 🎉"
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        val composition by rememberLottieComposition {
-            LottieCompositionSpec.JsonString(
-                Res.readBytes("files/confetti.json").decodeToString()
-            )
-        }
-        val progress by animateLottieCompositionAsState(composition)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .wrapContentHeight()
-                .background(Color.White, shape = RoundedCornerShape(16.dp))
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Confetti animation
-                Image(
-                    painter = rememberLottiePainter(
-                        composition = composition,
-                        progress = { progress }
-                    ),
-                    contentDescription = "Confetti"
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "🎉 Great job!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(onClick = onDismiss) {
-                    Text("OK")
+                if (isCorrect){
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = onComplete,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20)
+                    ) {
+                        Text("Next")
+//                        onComplete()
+                    }
                 }
             }
         }

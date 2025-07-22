@@ -1,6 +1,5 @@
 package com.dailydevchallenge.devstreaks.features.challenge
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dailydevchallenge.devstreaks.features.challenge.components.ActivityPager
+import com.dailydevchallenge.devstreaks.features.challenge.components.CompletionCard
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
@@ -27,90 +27,6 @@ data class ActivityPagerItem(
     val challenge: ChallengeActivity? = null // Optional, for quiz or code challenges
     // ...other fields if needed (quiz options, correctAns, etc.)
 )
-
-// 2. COMPONENTS FOR INSIGHT CARDS
-@Composable
-fun WhyItMattersCard(content: String) {
-    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.tertiaryContainer)) {
-        Column(Modifier.padding(14.dp)) {
-            Text("💡 Why this matters", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(content, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-fun TipCard(content: String) {
-    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer)) {
-        Column(Modifier.padding(14.dp)) {
-            Text("✨ Tip", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(content, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-fun BonusCard(content: String) {
-    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)) {
-        Column(Modifier.padding(14.dp)) {
-            Text("🎁 Bonus", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(content, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-fun AIBreakdownCard(content: String) {
-    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.padding(14.dp)) {
-            Text("🤖 AI Breakdown", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(content, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-// 3. NARRATIVE HERO & REFLECTION
-//@Composable
-//fun EngagingHero(day: ChallengeTask) {
-//    Card(
-//        modifier = Modifier.fillMaxWidth(),
-//        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)
-//    ) {
-//        Column(Modifier.padding(16.dp)) {
-//            Text(
-//                day.title, style = MaterialTheme.typography
-//                .titleLarge, fontWeight = FontWeight.Bold)
-//            Spacer(Modifier.height(6.dp))
-//            day.storyIntro?.let { Text(it, style = MaterialTheme.typography.bodyLarge); Spacer(Modifier.height(8.dp)) }
-//            Text("⭐ XP: ${day.xp}    🧩 ${day.type}", style = MaterialTheme.typography.labelSmall)
-//            day.tomorrowTeaser?.let {
-//                Spacer(Modifier.height(10.dp))
-//                Text("Tomorrow: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-//            }
-//        }
-//    }
-//}
-
-@Composable
-fun ReflectionCard(reflectionPrompt: String?) {
-    reflectionPrompt?.let {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text("📝 Reflect", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
 @Composable
 fun ChallengeDetailScreen(
     navController: NavController,
@@ -121,8 +37,8 @@ fun ChallengeDetailScreen(
     val viewedIds = remember { mutableStateListOf<String>() }
     val allDone = viewedIds.size >= day.challenges.size
     var started by remember { mutableStateOf(false) }
-    var showInsights by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var showConfetti by remember { mutableStateOf(false) }
     // logger
     val logger = remember { getLogger() }
 
@@ -149,7 +65,6 @@ fun ChallengeDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             CompactHero(day)
-
             if (!started) {
                 logger.d("StartTaskCard shown for day ${day.day}")
                 StartTaskCard {
@@ -157,55 +72,28 @@ fun ChallengeDetailScreen(
                     started = true
                 }
             } else {
-//                val fallbackChallenges = day.effectiveChallenges()
-//                logger.d("ActivitySection shown for day ${day.day}, viewedIds=${viewedIds.size}")
-//                ActivityPager(fallbackChallenges) { id ->
-//                    if (id !in viewedIds) {
-//                        logger.d("Challenge viewed: $id for day ${day.day}")
-//                        viewedIds.add(id)
-//                    }
-//                }
                 val items: List<ActivityPagerItem> = buildFullPagerList(day)
-                ActivityPager(items) { id -> if (id !in viewedIds) viewedIds.add(id) }
-                if (allDone && day.aiBreakdown != null) {
-                    ReflectionCard(day.aiBreakdown)
-                }
-            }
-            }
-
-            if (allDone && !isCompleted) {
-                logger.d("All challenges done for day ${day.day}, showing Mark as Done button")
-                Button(
-                    onClick = {
-                        logger.d("Mark as Done clicked for day ${day.day}")
+                ActivityPager(
+                    items = items,
+                    isChallengeCompleted = isCompleted,
+                    onAllCompleted = {
+                        logger.d("All activities completed for day ${day.day}")
                         onMarkAsDone()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("✅ Mark as Done")
+                        showConfetti = true
+                    }
+                )
+                if (isCompleted) {
+                    logger.d("CompletionCard shown for day ${day.day}")
+                    CompletionCard(
+                        onDismiss = { showConfetti = false },
+                        message = "Streak Achieved! 🎉 +${day.xp} XP",
+                    )
+
                 }
             }
-
-            if (isCompleted) {
-                logger.d("CompletionCard shown for day ${day.day}")
-                CompletionCard()
-            }
-
-            TextButton(onClick = {
-                logger.d("Show/Hide Insights toggled for day ${day.day}, now: ${!showInsights}")
-                showInsights = !showInsights
-            }) {
-                Text(if (showInsights) "Hide Insights" else "Show Insights")
-            }
-
-            if (showInsights) {
-                logger.d("OverviewInsights shown for day ${day.day}")
-                OverviewInsights(day)
             }
         }
     }
-// 4. UTILITY FUNCTIONS
 
 fun getInjectedInsights(day: ChallengeTask): List<ActivityPagerItem> {
     val insightCards = mutableListOf<ActivityPagerItem>()
@@ -270,62 +158,3 @@ fun StartTaskCard(onStart: () -> Unit) {
     }
 }
 
-@Composable
-fun OverviewInsights(day: ChallengeTask) {
-    var expandedSection by remember { mutableStateOf<String?>(null) }
-
-    @Composable
-    fun sectionCard(title: String, content: String, key: String) {
-        Card {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp)
-                    .clickable { expandedSection = if (expandedSection == key) null else key }
-            ) {
-                Text(title, style = MaterialTheme.typography.labelMedium)
-                if (expandedSection == key) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(content, style = MaterialTheme.typography.bodySmall)
-                } else {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        content.take(80) + if (content.length > 80) "..." else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        sectionCard("📖 Overview", day.content, "overview")
-        day.whyItMatters?.let { sectionCard("📌 Why it matters", it, "why") }
-        day.tip?.let { sectionCard("💡 Tip", it, "tip") }
-        day.bonus?.let { sectionCard("🎁 Bonus", it, "bonus") }
-        day.aiBreakdown?.let { sectionCard("🤖 AI Breakdown", it, "ai") }
-    }
-}
-
-@Composable
-fun CompletionCard() {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                "🎉 Challenge Completed!",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Great job finishing today’s tasks! You’re leveling up. 🔥",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-            )
-        }
-    }
-}

@@ -10,25 +10,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.dailydevchallenge.devstreaks.features.challenge.ActivityPagerItem
-import com.dailydevchallenge.devstreaks.features.challenge.WhyItMattersCard
-import com.dailydevchallenge.devstreaks.features.challenge.TipCard
-import com.dailydevchallenge.devstreaks.features.challenge.BonusCard
-import com.dailydevchallenge.devstreaks.features.challenge.AIBreakdownCard
-
 import com.dailydevchallenge.devstreaks.model.ActivityType
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
+import kotlinx.coroutines.launch
 
 @Composable
-fun ActivityRenderer(activity: ChallengeActivity, onViewed: (String) -> Unit = {}) {
+fun ActivityRenderer(activity: ChallengeActivity, onComplete: (String) -> Unit = {}) {
     Spacer(Modifier.height(16.dp))
     when (activity.type) {
-        ActivityType.QUIZ -> QuizCard(activity, onViewed = { onViewed(activity.id) })
-        ActivityType.CODE -> CodeChallengeCard(activity, onViewed = { onViewed(activity.id) })
-        ActivityType.FLASHCARD -> FlashcardActivityCard(activity, onViewed = { onViewed(activity.id) })
-        ActivityType.PROJECT -> ProjectActivityCard(activity, onViewed = { onViewed(activity.id) })
+        ActivityType.QUIZ -> QuizCard(activity, onComplete = { onComplete(activity.id) })
+        ActivityType.CODE -> CodeChallengeCard(activity, onComplete = { onComplete(activity.id) })
+        ActivityType.FLASHCARD -> FlashcardActivityCard(activity, onComplete = { onComplete(activity.id) })
+        ActivityType.PROJECT -> ProjectActivityCard(activity, onComplete = { onComplete(activity.id) })
     }
     activity.videoUrl?.let {
         Spacer(Modifier.height(12.dp))
@@ -47,10 +42,16 @@ fun ActivityRenderer(activity: ChallengeActivity, onViewed: (String) -> Unit = {
 @Composable
 fun ActivityPager(
     items: List<ActivityPagerItem>,
-    onActivityViewed: (String) -> Unit
+    onAllCompleted: () -> Unit,
+    isChallengeCompleted: Boolean
 ) {
     val pageCount = items.size
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount })
+    var currentPage by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    val completedIds = remember { mutableStateListOf<String>() }
+    val allDone = completedIds.size == items.size
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -58,58 +59,66 @@ fun ActivityPager(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
-                .padding(bottom = 80.dp). fillMaxSize()
+                .padding(bottom = 80.dp). fillMaxSize(),
+                    userScrollEnabled = false
         ) { page ->
             val item = items[page]
-            when (item.type) {
-                ActivityType.QUIZ.toString() -> item.challenge.let { challenge ->
-                    challenge?.let {
-                        QuizCard(challenge, onViewed = {
-                            onActivityViewed(challenge.id)
-                        })
-                    } ?: Text(
-                        "Missing " +
-                                "quiz data", Modifier.padding(20.dp)
-                    )
+            val isLast = page == items.lastIndex
+            ActivityCardRenderer(item, onComplete = {
+                if (!completedIds.contains(item.id)) completedIds.add(item.id)
+                if (!isLast) {
+                    coroutineScope.launch { pagerState.animateScrollToPage(page + 1) }
                 }
-
-                ActivityType.CODE.toString() -> {
-                    item.challenge.let { challenge ->
-                        challenge?.let {
-                            CodeChallengeCard(
-                                challenge,
-                                onViewed = { onActivityViewed(challenge.id) })
-                        }
-                    } ?: Text("Missing code data", Modifier.padding(20.dp))
-                }
-
-                ActivityType.FLASHCARD.toString() -> {
-                    item.challenge.let { challenge ->
-                        challenge?.let {
-                            FlashcardActivityCard(challenge, onViewed = {
-                                onActivityViewed(challenge.id)
-                            })
-                        }
-                    } ?: Text("Missing flashcard data", Modifier.padding(20.dp))
-                }
-
-                ActivityType.PROJECT.toString() -> {
-                    item.challenge.let { challenge ->
-                        challenge?.let {
-                            ProjectActivityCard(
-                                challenge,
-                                onViewed = { onActivityViewed(challenge.id) })
-                        }
-                    } ?: Text("Missing project data", Modifier.padding(20.dp))
-                }
-
-                "why" -> WhyItMattersCard(item.content ?: "")
-                "tip" -> TipCard(item.content ?: "")
-                "bonus" -> BonusCard(item.content ?: "")
-                "aiBreakdown" -> AIBreakdownCard(item.content ?: "")
-                else -> Text(item.content ?: "Unknown card", Modifier.padding(20.dp))
-            }
+            }, isLast = isLast)
         }
+//            when (item.type) {
+//                ActivityType.QUIZ.toString() -> item.challenge.let { challenge ->
+//                    challenge?.let {
+//                        QuizCard(challenge, onViewed = {
+//                            onActivityViewed(challenge.id)
+//                        })
+//                    } ?: Text(
+//                        "Missing " +
+//                                "quiz data", Modifier.padding(20.dp)
+//                    )
+//                }
+//
+//                ActivityType.CODE.toString() -> {
+//                    item.challenge.let { challenge ->
+//                        challenge?.let {
+//                            CodeChallengeCard(
+//                                challenge,
+//                                onViewed = { onActivityViewed(challenge.id) })
+//                        }
+//                    } ?: Text("Missing code data", Modifier.padding(20.dp))
+//                }
+//
+//                ActivityType.FLASHCARD.toString() -> {
+//                    item.challenge.let { challenge ->
+//                        challenge?.let {
+//                            FlashcardActivityCard(challenge, onViewed = {
+//                                onActivityViewed(challenge.id)
+//                            })
+//                        }
+//                    } ?: Text("Missing flashcard data", Modifier.padding(20.dp))
+//                }
+//
+//                ActivityType.PROJECT.toString() -> {
+//                    item.challenge.let { challenge ->
+//                        challenge?.let {
+//                            ProjectActivityCard(
+//                                challenge,
+//                                onViewed = { onActivityViewed(challenge.id) })
+//                        }
+//                    } ?: Text("Missing project data", Modifier.padding(20.dp))
+//                }
+//
+//                "why" -> WhyItMattersCard(item.content ?: "")
+//                "tip" -> TipCard(item.content ?: "")
+//                "bonus" -> BonusCard(item.content ?: "")
+//                "aiBreakdown" -> AIBreakdownCard(item.content ?: "")
+//                else -> Text(item.content ?: "Unknown card", Modifier.padding(20.dp))
+//            }
     PagerIndicator(
         pageCount = items.size,
         currentPageIndex = pagerState.currentPage,
@@ -124,8 +133,18 @@ fun ActivityPager(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary
         )
-        // can make swipeHintShown a state to show only once or fade out
     }
+        if (allDone && !isChallengeCompleted) {
+            Button(
+                onClick = onAllCompleted,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+            ) {
+                Text("✅ Mark as Done")
+            }
+
+        }
 }
 }
 
@@ -151,3 +170,49 @@ fun PagerIndicator(pageCount: Int, currentPageIndex: Int, modifier: Modifier = M
         }
     }
 }
+
+@Composable
+fun ActivityCardRenderer(
+    item: ActivityPagerItem,
+    onComplete: () -> Unit,
+    isLast: Boolean
+) {
+    when (item.type) {
+        ActivityType.QUIZ.toString() -> {
+            QuizCard(item.challenge!!, onComplete)
+        }
+        ActivityType.CODE.toString() -> {
+            CodeChallengeCard(item.challenge!!, onComplete)
+        }
+        ActivityType.FLASHCARD.toString() -> {
+            FlashcardActivityCard(item.challenge!!, onComplete)
+        }
+        ActivityType.PROJECT.toString() -> {
+            ProjectActivityCard(item.challenge!!, onComplete)
+        }
+        // For info/tip/bonus/AI cards, simple button
+        "why", "tip", "bonus", "aiBreakdown" -> {
+            InfoCardWithNext(item, onComplete, isLast)
+        }
+        else -> {
+            // Fallback
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Button(onClick = onComplete) { Text(if (isLast) "Finish" else "Next") }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoCardWithNext(item: ActivityPagerItem, onComplete: () -> Unit, isLast: Boolean) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(item.content ?: "")
+        Spacer(Modifier.height(16.dp))
+        Button(
+            onClick = onComplete,
+            modifier = Modifier.fillMaxWidth()
+        ) { Text(if (isLast) "Finish" else "Next") }
+    }
+}
+
+

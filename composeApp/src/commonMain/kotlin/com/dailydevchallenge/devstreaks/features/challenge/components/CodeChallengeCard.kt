@@ -15,16 +15,13 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
-fun CodeChallengeCard(activity: ChallengeActivity, onViewed: () -> Unit) {
+fun CodeChallengeCard(activity: ChallengeActivity, onComplete: () -> Unit) {
     var userCode by remember { mutableStateOf(activity.starterCode ?: "") }
     var showExplanation by remember { mutableStateOf(false) }
     var aiFeedback by remember { mutableStateOf<String?>(null) }
     var isReviewing by remember { mutableStateOf(false) }
     val llmService: LLMService = koinInject()
     val coroutineScope = rememberCoroutineScope() // ✅ Correct way
-    LaunchedEffect(Unit) {
-        onViewed()
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -78,12 +75,13 @@ fun CodeChallengeCard(activity: ChallengeActivity, onViewed: () -> Unit) {
                     coroutineScope.launch {
                         val response = llmService.reviewCode(activity.prompt, activity.language, userCode)
                         aiFeedback = response
+                        onComplete()
                         isReviewing = false
                     }
                 },
                 shape = MaterialTheme.shapes.small
             ) {
-                Text("🤖 Review My Code")
+                Text("🤖 Review Your Code to complete task")
             }
 
             if (showExplanation && !activity.explanation.isNullOrBlank()) {

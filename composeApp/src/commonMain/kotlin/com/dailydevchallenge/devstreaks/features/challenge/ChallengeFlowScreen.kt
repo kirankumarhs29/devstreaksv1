@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import com.dailydevchallenge.devstreaks.features.challenge.components.CompletionCard
+import com.dailydevchallenge.devstreaks.features.challenge.components.playSuccessSound
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 
 enum class ChallengeStep { LEARN, DO, COMPLETE }
@@ -35,7 +37,8 @@ fun ChallengeFlowScreen(
     when (currentStep) {
         ChallengeStep.LEARN -> ChallengeLearnScreen(
             task = task,
-            onNext = { currentStep = ChallengeStep.DO }
+            onNext = { currentStep = ChallengeStep.DO },
+            navController = navController
         )
 
         ChallengeStep.DO -> ChallengeDetailStepScreen(task,
@@ -44,11 +47,10 @@ fun ChallengeFlowScreen(
                 currentStep = ChallengeStep.COMPLETE
             }
         )
-
-        ChallengeStep.COMPLETE -> CompletionScreen(
-            xp = task.xp,
-            onContinue = { navController.popBackStack() }
-        )
+        ChallengeStep.COMPLETE -> CompletionCard(
+                onDismiss = { navController.popBackStack() } ,
+                message = "Streak Achieved! 🎉 +${task.xp} XP"
+            )
     }
 }
 
