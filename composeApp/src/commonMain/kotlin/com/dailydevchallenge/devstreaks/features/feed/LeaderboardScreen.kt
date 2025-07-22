@@ -2,6 +2,8 @@ package com.dailydevchallenge.devstreaks.features.feed
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,44 +13,37 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.dailydevchallenge.devstreaks.model.UserStats
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
+import com.dailydevchallenge.devstreaks.model.LeaderboardViewModel
 import com.dailydevchallenge.devstreaks.settings.DarkModeSettings
 import org.koin.compose.koinInject
 
 @Composable
-fun LeaderboardScreen(viewModel: HomeViewModel = koinInject()) {
-    val currentUser by viewModel.userStats.collectAsState()
-    val allUsers = listOf(
-        UserStats("Anya", 900, 15),
-        UserStats("Ravi", 850, 10),
-        UserStats("Lina", 780, 14),
-        UserStats("Kiran", 740, 12),
-        currentUser
-    )
+fun LeaderboardScreen(viewModel: LeaderboardViewModel = koinInject()) {
+    val users by viewModel.leaderboard.collectAsState()
+    val loading by viewModel.loading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val currentUserId = viewModel.currentUserId
+    // Add this:
+    LaunchedEffect(Unit) {
+        viewModel.loadLeaderboard()
+    }
 
-    val sortedUsers = allUsers.distinctBy { it.name }.sortedByDescending { it.xp }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "🔥 Leaderboard",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-        )
-
-        sortedUsers.forEachIndexed { index, user ->
-            NetflixLeaderboardCard(
-                user = user,
-                rank = index + 1,
-                isCurrentUser = user.name == currentUser.name
-            )
+    when {
+        loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Error: $error")
+        }
+        else -> LazyColumn {
+            itemsIndexed(users) { idx, user ->
+                NetflixLeaderboardCard(
+                    user = user,
+                    isCurrentUser = user.userId == currentUserId.toString(),
+                    rank = idx + 1
+                )
+            }
         }
     }
 }

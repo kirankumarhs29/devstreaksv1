@@ -3,11 +3,9 @@ package com.dailydevchallenge.devstreaks.features.home
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.dailydevchallenge.devstreaks.features.feed.UserStats
 import com.dailydevchallenge.devstreaks.llm.LLMService
-
-
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
-import com.dailydevchallenge.devstreaks.model.UserStats
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*

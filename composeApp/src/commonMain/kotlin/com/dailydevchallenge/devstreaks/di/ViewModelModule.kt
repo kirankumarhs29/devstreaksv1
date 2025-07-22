@@ -5,8 +5,9 @@ import com.dailydevchallenge.devstreaks.features.devcoach.DevChatViewModel
 import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
 import com.dailydevchallenge.devstreaks.features.onboarding.OnboardingViewModel
-
+import com.dailydevchallenge.devstreaks.model.LeaderboardViewModel
 import com.dailydevchallenge.devstreaks.model.ProfileViewModel
+import com.dailydevchallenge.devstreaks.model.UserInfoViewModel
 import org.koin.dsl.module
 
 val viewModelModule = module {
@@ -20,5 +21,8 @@ val viewModelModule = module {
         )
     }
     single { ResumeChatViewModel(get(), get(), get()) }
+    single { LeaderboardViewModel(get(),get()) }
+    single{ UserInfoViewModel(get())}
+
 
 }

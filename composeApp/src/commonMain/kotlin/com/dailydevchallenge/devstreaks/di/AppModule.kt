@@ -18,6 +18,7 @@ import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences
 import com.dailydevchallenge.devstreaks.features.onboarding.OnboardingViewModel
+import com.dailydevchallenge.devstreaks.model.LeaderboardViewModel
 import com.dailydevchallenge.devstreaks.model.ProfileViewModel
 import com.dailydevchallenge.devstreaks.repository.JournalRepository
 import com.dailydevchallenge.devstreaks.repository.JournalRepositoryImpl
@@ -63,5 +64,6 @@ val appModule = module {
         )
     }
     single { ResumeChatViewModel(get(), get(), get()) }
+    single { LeaderboardViewModel(get(), get()) }
 
 }

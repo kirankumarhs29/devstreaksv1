@@ -42,6 +42,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,10 +53,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
+import com.dailydevchallenge.devstreaks.model.UserInfoViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsTab(onLogout: () -> Unit) {
+fun SettingsTab(
+    onLogout: () -> Unit,
+    userInfoViewModel: UserInfoViewModel = koinInject()
+) {
+    val profile by userInfoViewModel.profile.collectAsState()
     val notificationsEnabledState = remember { mutableStateOf(UserPreferences.isNotificationsEnabled()) }
     val darkModeEnabled by DarkModeSettings.darkModeFlow.collectAsState()
     val authService: AuthService = koinInject()
@@ -88,6 +94,14 @@ fun SettingsTab(onLogout: () -> Unit) {
                 .consumeWindowInsets(innerPadding)
         ) {
             item {
+                if (profile == null) {
+                    CircularProgressIndicator()
+                } else {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(profile!!.displayName ?: "User", fontWeight = FontWeight.Bold)
+                        Text(profile!!.email ?: "No email")
+                    }
+                }
                 SettingsSection(title = "Preferences") {
                     SettingItem(
                         label = "Notifications",

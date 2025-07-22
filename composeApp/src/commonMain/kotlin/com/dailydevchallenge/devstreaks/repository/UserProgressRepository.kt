@@ -11,3 +11,13 @@ interface UserProgressRepository {
     fun resetProgress()
     fun advanceDay()
 }
+
+interface UserInfoRepository {
+    suspend fun getCurrentUserProfile(): PublicUserProfile?
+}
+
+data class PublicUserProfile(
+    val userId: String,
+    val displayName: String?,
+    val email: String?
+)

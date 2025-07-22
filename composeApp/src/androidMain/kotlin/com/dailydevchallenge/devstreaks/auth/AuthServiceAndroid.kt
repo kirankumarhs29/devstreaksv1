@@ -3,6 +3,7 @@ package com.dailydevchallenge.devstreaks.auth
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthServiceAndroid : AuthService {
     private val auth: FirebaseAuth
@@ -32,7 +33,7 @@ class AuthServiceAndroid : AuthService {
                 }
         }
 
-    override suspend fun signup(email: String, password: String): AuthResult =
+    override suspend fun signup(name : String,email: String, password: String): AuthResult =
         suspendCancellableCoroutine { cont ->
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
@@ -44,6 +45,19 @@ class AuthServiceAndroid : AuthService {
                                 val uid = user.uid
                                 if (token != null) {
                                     cont.resume(AuthResult.Success(uid, token))
+                                    val user = FirebaseAuth.getInstance().currentUser
+                                    if (user != null) {
+                                        val db = FirebaseFirestore.getInstance()
+                                        val userDoc = db.collection("users").document(user.uid)
+                                        val userData = mapOf(
+                                            "name" to name,
+                                            "email" to user.email,
+                                            "xp" to 0,
+                                            "streak" to 0
+                                        )
+                                        userDoc.set(userData)
+                                    }
+
                                 } else {
                                     cont.resume(AuthResult.Error("Token is null"))
                                 }
