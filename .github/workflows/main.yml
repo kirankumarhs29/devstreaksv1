@@ -30,10 +30,10 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build Android
-        run: ./gradlew :androidApp:assembleDebug
+        run: ./gradlew :composeApp:assembleDebug
 
       - name: Lint
         run: ./gradlew lint
 
       - name: Run Unit Tests
-        run: ./gradlew :shared:testDebugUnitTest
+        run: ./gradlew :composeApp:testDebugUnitTest
