@@ -37,3 +37,8 @@ jobs:
 
       - name: Run Unit Tests
         run: ./gradlew :composeApp:testDebugUnitTest
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevStreaks-APK
+          path: composeApp/build/outputs/apk/debug/composeApp-debug.apk
