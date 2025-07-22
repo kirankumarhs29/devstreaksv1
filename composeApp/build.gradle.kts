@@ -159,6 +159,12 @@ android {
                 mappingFileUploadEnabled = true
             }
         }
+        getByName("debug") {
+            isMinifyEnabled = false
+            debug {
+                isDebuggable = true
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
