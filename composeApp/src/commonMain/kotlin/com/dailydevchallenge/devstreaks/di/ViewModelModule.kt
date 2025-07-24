@@ -12,7 +12,7 @@ import org.koin.dsl.module
 
 val viewModelModule = module {
     single { OnboardingViewModel(get(), get(), get()) }
-    single { HomeViewModel(get(), get(), get()) }
+    single { HomeViewModel(get(), get(), get(),get()) }
     single { DevChatViewModel(get(), get(), get()) }
     single { (userId: String) ->
         ProfileViewModel(

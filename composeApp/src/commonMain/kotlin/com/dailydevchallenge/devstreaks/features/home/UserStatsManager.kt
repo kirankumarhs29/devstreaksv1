@@ -17,10 +17,8 @@ class UserStatsManager(private val repository: ChallengeRepository) {
     val lastCompletedDate: StateFlow<String?> = _lastCompletedDate.asStateFlow()
 
     suspend fun loadStats() {
-        val (xpValue, streakValue, lastDate) = repository.getUserStats()
-        // Update combined stats
-        _userStats.value = _userStats.value.copy(xp = xpValue, streak = streakValue)
-        _lastCompletedDate.value = lastDate
+        val stats = repository.getUserStats()
+        _userStats.value = stats
     }
 
     suspend fun refreshAfterTaskCompletion(taskId: String, xp: Int) {

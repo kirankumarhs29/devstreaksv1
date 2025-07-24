@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.*
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
+import com.dailydevchallenge.devstreaks.repository.LeaderboardRepository
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import kotlinx.datetime.*
 
@@ -19,7 +20,8 @@ import kotlinx.datetime.*
 class HomeViewModel(
     private val repository: ChallengeRepository,
     private val profilePreferences: LearningProfilePreferences,
-    private val llmService: LLMService
+    private val llmService: LLMService,
+    private val lRepository: LeaderboardRepository
 ) {
 
     private val viewModelScope = CoroutineScope(
@@ -90,11 +92,6 @@ class HomeViewModel(
         _onboardingCompleted.value = value
         profilePreferences.setOnboardingCompleted(value) // save persistently
     }
-
-
-
-
-
     val challengeProgress: StateFlow<Pair<Int, Int>> = combine(
         completedTaskIds,
         tasks

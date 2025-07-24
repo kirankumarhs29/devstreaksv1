@@ -10,17 +10,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.*
 import com.dailydevchallenge.devstreaks.database.toModel // for both extensions
+import com.dailydevchallenge.devstreaks.features.feed.UserStats
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengePathWithTasks
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
 import com.dailydevchallenge.devstreaks.model.TaskReflection
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
+import com.dailydevchallenge.devstreaks.sync.FirebaseUserHelper
 import com.dailydevchallenge.devstreaks.sync.PlatformSync
 
 
 class ChallengeRepository(
     private val pathQueries: ChallengePathQueries,
-    private val userProfileQueries: UserProfileQueries
+    private val userProfileQueries: UserProfileQueries,
+    private val firebaseUserHelper: FirebaseUserHelper
 ) {
 
     suspend fun savePathToDb(path: ChallengePathResponse): String = withContext(Dispatchers.Default) {
@@ -115,6 +119,7 @@ class ChallengeRepository(
                 completedDate = today
             )
         )
+        // Update user stats
 
         val currentStats = pathQueries.selectUserStats().executeAsOneOrNull()
         val yesterday = LocalDate.parse(today).minus(1, DateTimeUnit.DAY).toString()
@@ -123,6 +128,7 @@ class ChallengeRepository(
         val newXp = (currentStats?.xp ?: 0) + xp
         val newStreak = if (isStreak) (currentStats?.streak ?: 0) + 1 else 1
 
+        firebaseUserHelper.updateUserProgress(userId,xp, streak = currentStats?.streak)
         pathQueries.insertOrReplaceUserStats(
             id = "user_stats",
             xp = newXp.toLong(),
@@ -135,11 +141,12 @@ class ChallengeRepository(
         userProfileQueries.selectUserProgressByTask(taskId, userId).executeAsOneOrNull() != null
     }
 
-    suspend fun getUserStats(): Triple<Int, Int, String?> = withContext(Dispatchers.Default) {
-        pathQueries.selectUserStats().executeAsOneOrNull()?.let {
-            Triple(it.xp?.toInt() ?: 0, it.streak?.toInt() ?: 0, it.lastCompletedDate)
-        } ?: Triple(0, 0, null)
+    suspend fun getUserStats(): UserStats {
+        val userId = UserPreferences.getSafeUserId() // Get from your auth/session
+        return firebaseUserHelper.fetchUserProgress(userId) ?: UserStats(userId, "" +
+                "(DevStreak-User)", 0, 0)
     }
+
 
     suspend fun getPathById(pathId: String): ChallengePath? = withContext(Dispatchers.Default) {
         pathQueries.selectAllPaths().executeAsList().find { it.id == pathId }?.let {

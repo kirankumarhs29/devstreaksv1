@@ -28,4 +28,19 @@ class FirebaseUserHelperIos : FirebaseUserHelper {
             )
         }
     }
+    override suspend fun updateUserProgress(userId: String, xp: Int, streak: Long?) {
+        val db = Firebase.firestore
+        db.collection("users").document(userId).update(mapOf("xp" to xp, "streak" to streak))
+    }
+    override suspend fun fetchUserProgress(userId: String): UserStats? {
+        val doc = Firebase.firestore.collection("users").document(userId).get()
+        return if (doc.exists) {
+            UserStats(
+                userId = doc.id,
+                name = doc.data["name"] as? String ?: "(anon)",
+                xp = (doc.data["xp"] as? Long)?.toInt() ?: 0,
+                streak = (doc.data["streak"] as? Long)?.toInt() ?: 0
+            )
+        } else null
+    }
 }

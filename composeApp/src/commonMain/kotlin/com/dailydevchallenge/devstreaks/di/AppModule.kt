@@ -37,7 +37,7 @@ val appModule = module {
         ChallengeDatabase(driver)
     }
     single { get<ChallengeDatabase>().challengePathQueries }
-    single { ChallengeRepository(get(),get()) }
+    single { ChallengeRepository(get(),get(), get()) }
     single<JournalRepository> { JournalRepositoryImpl(get()) }
     single <MemoryRepository>{ MemoryRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
@@ -55,7 +55,7 @@ val appModule = module {
 
     // ViewModels
     single { OnboardingViewModel(get(), get() , get()) }
-    single { HomeViewModel(get(), get(), get()) }
+    single { HomeViewModel(get(), get(), get(), get()) }
     single { DevChatViewModel(get(), get(), get()) }
     single { (userId: String) ->
         ProfileViewModel(

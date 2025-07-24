@@ -22,6 +22,8 @@ expect object PlatformSync {
 interface FirebaseUserHelper {
     suspend fun getCurrentUserProfile(): PublicUserProfile?
     suspend fun getAllUserStats(): List<UserStats>
+    suspend fun updateUserProgress(userId: String, xp: Int, streak: Long?)
+    suspend fun fetchUserProgress(userId: String): UserStats?
 }
 
 expect fun getPlatformFirebaseUserHelper(): FirebaseUserHelper

@@ -20,7 +20,7 @@ import com.dailydevchallenge.devstreaks.sync.getPlatformFirebaseUserHelper
 
 
 val repositoryModule = module {
-    single { ChallengeRepository(get(),get()) }
+    single { ChallengeRepository(get(),get(), get()) }
     single<JournalRepository> { JournalRepositoryImpl(get()) }
     single <MemoryRepository>{MemoryRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }

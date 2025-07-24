@@ -5,7 +5,6 @@ import com.dailydevchallenge.devstreaks.repository.PublicUserProfile
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import androidx.lifecycle.viewModelScope
 import com.dailydevchallenge.devstreaks.utils.getLogger
 
 actual fun getPlatformFirebaseUserHelper(): FirebaseUserHelper {
@@ -48,5 +47,30 @@ class FirebaseUserHelperAndroid : FirebaseUserHelper {
                     streak = doc.getLong("streak")?.toInt() ?: 0
                 )
             }
+        }
+        override suspend fun updateUserProgress(userId: String, xp: Int, streak: Long?) {
+            val db = FirebaseFirestore.getInstance()
+            logger().d("FirebaseUserHelperAndroid", "updateUserProgress: userId = $userId, xp = $xp, streak = $streak")
+            val userDoc = db.collection("users").document(userId)
+            userDoc.update(mapOf("xp" to xp, "streak" to streak)).await()
+            logger().d("FirebaseUserHelperAndroid", "updateUserProgress: Updated user $userId with xp=$xp, streak=$streak")
+        }
+        override suspend fun fetchUserProgress(userId: String): UserStats? {
+            val doc = FirebaseFirestore.getInstance().collection("users").document(userId).get().await()
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: userId = $userId, doc = $doc")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document exists = ${doc.exists()}")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document data = ${doc.data}")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document id = ${doc.id}")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document name = ${doc.getString("name")}")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document xp = ${doc.getLong("xp")}")
+            logger().d("FirebaseUserHelperAndroid", "fetchUserProgress: Document streak = ${doc.getLong("streak")}")
+            return if (doc.exists()) {
+                UserStats(
+                    userId = doc.id,
+                    name = doc.getString("name") ?: "(anon)",
+                    xp = doc.getLong("xp")?.toInt() ?: 0,
+                    streak = doc.getLong("streak")?.toInt() ?: 0
+                )
+            } else null
         }
 }

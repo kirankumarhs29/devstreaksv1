@@ -107,7 +107,7 @@ fun ProfileHeader(viewModel: HomeViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "DevStreak User",
+                text = stats.name,
                 style = MaterialTheme.typography.titleMedium.copy(
                     color = MaterialTheme.colorScheme.onBackground
                 )
