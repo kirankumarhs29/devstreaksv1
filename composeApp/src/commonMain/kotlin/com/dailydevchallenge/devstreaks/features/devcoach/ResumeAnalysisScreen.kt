@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dailydevchallenge.database.InterviewSession
 import com.dailydevchallenge.database.UserAnswer
+import com.dailydevchallenge.devstreaks.features.dailyCoach.DevCoachLottieAvatar
 import com.dailydevchallenge.devstreaks.llm.ChatUIMessage
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.tts.TTSHelper
@@ -113,6 +114,7 @@ fun ResumeAndInterviewScreen(
     navController: NavController
 ) {
     val uiState by resumeChatViewModel.uiState.collectAsState()
+
     LaunchedEffect(Unit) {
         resumeChatViewModel.loadLastOrPromptForResume()
         resumeChatViewModel.loadHistory()
@@ -778,21 +780,22 @@ fun ChatBubble(message: ChatUIMessage , onSpeakClick: (String) -> Unit = {}) {
         is ChatUIMessage.Sent -> message.text
         is ChatUIMessage.Received -> message.text
     }
+    val timestamp = when (message) {
+        is ChatUIMessage.Sent -> message.timestamp
+        is ChatUIMessage.Received -> message.timestamp
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth()
         .padding(horizontal = 8.dp, vertical = 4.dp),
     horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
        if (!isUser) {
-            // AI Avatar
             Card(
                 modifier = Modifier.size(40.dp),
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2196F3))
+                shape = CircleShape
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("AI", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                DevCoachLottieAvatar()
             }
             Spacer(Modifier.width(8.dp))
         }
@@ -828,7 +831,7 @@ fun ChatBubble(message: ChatUIMessage , onSpeakClick: (String) -> Unit = {}) {
 
                     // Timestamp
                     Text(
-                        text = formatTime(Clock.System.now().toEpochMilliseconds()),
+                        text = formatTime(timestamp),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.align(if (isUser) Alignment.End else Alignment.Start)

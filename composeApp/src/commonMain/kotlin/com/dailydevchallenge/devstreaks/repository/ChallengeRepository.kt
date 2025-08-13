@@ -10,15 +10,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.*
 import com.dailydevchallenge.devstreaks.database.toModel // for both extensions
+import com.dailydevchallenge.devstreaks.database.toPreferenceString
 import com.dailydevchallenge.devstreaks.features.feed.UserStats
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengePathWithTasks
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
+import com.dailydevchallenge.devstreaks.model.EngagementRecord
 import com.dailydevchallenge.devstreaks.model.TaskReflection
+import com.dailydevchallenge.devstreaks.model.User
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import com.dailydevchallenge.devstreaks.sync.FirebaseUserHelper
 import com.dailydevchallenge.devstreaks.sync.PlatformSync
+import com.dailydevchallenge.devstreaks.utils.getLogger
 
 
 class ChallengeRepository(
@@ -26,6 +30,7 @@ class ChallengeRepository(
     private val userProfileQueries: UserProfileQueries,
     private val firebaseUserHelper: FirebaseUserHelper
 ) {
+    val Logger  = { getLogger()}
 
     suspend fun savePathToDb(path: ChallengePathResponse): String = withContext(Dispatchers.Default) {
         val pathId = generateUUID()
@@ -79,6 +84,26 @@ class ChallengeRepository(
             taskEntity.toModel(challenges) // This maps ChallengeTaskEntity + activities → ChallengeTask
         }
     }
+    suspend fun logEngagementTime(
+        taskId: String,
+        userId: String,
+        startTime: Long,
+        endTime: Long
+    ) = withContext(Dispatchers.Default) {
+        val duration = endTime - startTime
+        pathQueries.insertEngagement(
+            id = generateUUID(),
+            taskId = taskId,
+            userId = userId,
+            startTime = startTime,
+            endTime = endTime,
+            durationMillis = duration
+        )
+        PlatformSync.uploadEngagementData(
+            EngagementRecord(taskId, userId, startTime, endTime, duration)
+        )
+    }
+
 
 
 
@@ -128,13 +153,17 @@ class ChallengeRepository(
         val newXp = (currentStats?.xp ?: 0) + xp
         val newStreak = if (isStreak) (currentStats?.streak ?: 0) + 1 else 1
 
-        firebaseUserHelper.updateUserProgress(userId,xp, streak = currentStats?.streak)
+        firebaseUserHelper.updateUserProgress(userId, newXp, streak = currentStats?.streak)
         pathQueries.insertOrReplaceUserStats(
             id = "user_stats",
             xp = newXp.toLong(),
             streak = newStreak.toLong(),
             lastCompletedDate = today
         )
+    }
+    suspend fun getXPAndStreak(): Pair<Int, Int> = withContext(Dispatchers.Default) {
+        val stats = pathQueries.selectUserStats().executeAsOneOrNull()
+        return@withContext Pair(stats?.xp?.toInt() ?: 0, stats?.streak?.toInt() ?: 0)
     }
 
     suspend fun isTaskCompleted(taskId: String, userId: String): Boolean = withContext(Dispatchers.Default) {
@@ -144,7 +173,7 @@ class ChallengeRepository(
     suspend fun getUserStats(): UserStats {
         val userId = UserPreferences.getSafeUserId() // Get from your auth/session
         return firebaseUserHelper.fetchUserProgress(userId) ?: UserStats(userId, "" +
-                "(DevStreak-User)", 0, 0)
+                "(DevStreak-User)", 0, 0, 0)
     }
 
 
@@ -232,6 +261,44 @@ class ChallengeRepository(
     // fetch generated course by requestId from Firestore
     suspend fun fetchGeneratedCourse(requestId: String): ChallengePathResponse? {
         return PlatformSync.fetchGeneratedCourse(requestId)
+    }
+    suspend fun getUserById(userId: String): User? = withContext(Dispatchers.Default) {
+        // If userId is not provided, use the one from preferences
+        val userId = if (userId.isBlank()) UserPreferences.getSafeUserId() else userId
+        val localData = userProfileQueries.getUserById(userId).executeAsOneOrNull()?.toModel()
+        getLogger().d("ChallengeRepository", "getUserById: Local user data for $userId: $localData")
+        if (localData != null) {
+            // If user exists in local DB, return it
+            return@withContext localData
+        } else {
+            val userData =
+                firebaseUserHelper.getCurrentUserdata(userId, UserPreferences.getEmailId() ?: "")
+                getLogger().d("ChallengeRepository", "getUserById: Fetched user data from remote: $userData")
+            return@withContext userData
+        }
+    }
+
+    suspend fun insertUser(user: User) = withContext(Dispatchers.Default) {
+        userProfileQueries.insertUser(
+            user.userId, user.email, user.passwordHash, user.username,
+            user.avatarUrl, user.createdAt, user.lastLogin, user.xp.toLong(),
+            user.level ?: 1, user.dailyStreak ?: 0,
+            user.streakStartDate?.toEpochMilliseconds(),
+            user.preferences.toPreferenceString()
+            , user.role,
+            user.badges.joinToString("|")
+        )
+    }
+
+    suspend fun updateUser(user: User) = withContext(Dispatchers.Default) {
+        userProfileQueries.updateUser(
+            user.email, user.passwordHash, user.username,
+            user.avatarUrl, user.lastLogin, user.xp.toLong(),
+            user.level ?: 1, user.dailyStreak ?: 0,
+            user.streakStartDate?.toEpochMilliseconds(),
+            user.preferences.toPreferenceString(), user.role,
+            user.badges.joinToString("|"), userId = user.userId
+        )
     }
 
 }

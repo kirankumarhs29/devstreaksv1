@@ -37,12 +37,15 @@ CREATE TABLE ChallengeActivity (
     videoUrl TEXT
 );
 
--- CREATE TABLE UserProgress (
---     id TEXT PRIMARY KEY,
---     userId TEXT NOT NULL, -- ✅ Add this line
---     completedTaskId TEXT,
---     completedDate TEXT
--- );
+CREATE TABLE userEngagement (
+    id TEXT PRIMARY KEY,
+    taskId TEXT,
+    userId TEXT,
+    startTime INTEGER,
+    endTime INTEGER,
+    durationMillis INTEGER
+);
+
 
 CREATE TABLE UserStats (
     id TEXT PRIMARY KEY,
@@ -85,6 +88,14 @@ CREATE TABLE TaskReflection (
 insertOrReplaceUserStats:
 INSERT OR REPLACE INTO UserStats(id, xp, streak, lastCompletedDate)
 VALUES (?, ?, ?, ?);
+
+insertEngagement:
+INSERT INTO userEngagement(id, taskId, userId, startTime, endTime, durationMillis)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAllEngagements:
+SELECT * FROM userEngagement;
+
 
 -- Get current stats
 selectUserStats:

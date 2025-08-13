@@ -7,7 +7,7 @@ import platform.AVFoundation.AVSpeechUtterance
 actual class TTSHelper actual constructor(context: Any) {
     private val synthesizer = AVSpeechSynthesizer()
 
-    actual fun speak(text: String) {
+    actual fun speak(text: String, onDone: () -> Unit) {
         val utterance = AVSpeechUtterance(text)
         synthesizer.speakUtterance(utterance)
     }

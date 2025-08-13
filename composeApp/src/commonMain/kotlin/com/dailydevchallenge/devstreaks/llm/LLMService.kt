@@ -1,7 +1,6 @@
 package com.dailydevchallenge.devstreaks.llm
 
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
-import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
 import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
 import com.dailydevchallenge.devstreaks.model.InterviewStepResult
@@ -19,8 +18,6 @@ interface LLMService {
         fear: String,
         requestId: String,
     ): ChallengePathResponse
-
-    suspend fun generateQuickPractice(skills: List<String>): ChallengeTask
 
     suspend fun generatePlan(
         goal: String,

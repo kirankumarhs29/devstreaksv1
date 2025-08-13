@@ -50,12 +50,15 @@ data class ChallengeActivity(
     val starterCode: String? = null,
     val explanation: String? = null,
     val solutionCode: String? = null,
-    val videoUrl: String? = null
+    val videoUrl: String? = null,
+    val insight: String? = null,        // Why this matters
+    val goal: String? = null,           // What you should achieve
+    val skillFocus: String? = null      // e.g., "Loops", "Debugging", "Edge Cases"
 )
 
 @Serializable
 enum class ActivityType {
-    QUIZ, CODE, FLASHCARD, PROJECT
+    QUIZ, CODE, FLASHCARD, PROJECT, AI_LESSON
 }
 @Serializable
 data class ChallengePathResponse(
@@ -198,6 +201,15 @@ data class RemoteInterviewStepResult(
     val score: Int? = null,  // Add this
     val done: Boolean = false, // Add default value
 )
+
+data class EngagementRecord(
+    val taskId: String,
+    val userId: String,
+    val startTime: Long,
+    val endTime: Long,
+    val durationMillis: Long
+)
+
 
 
 

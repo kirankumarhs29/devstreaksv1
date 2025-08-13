@@ -1,7 +1,6 @@
 package com.dailydevchallenge.devstreaks.llm
 
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
-import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.model.RemoteResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
@@ -12,21 +11,18 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
 import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
 import com.dailydevchallenge.devstreaks.model.InterviewStepResult
 import com.dailydevchallenge.devstreaks.model.QAHistory
-import com.dailydevchallenge.devstreaks.model.RemoteInterviewQuestion
 import com.dailydevchallenge.devstreaks.model.RemoteInterviewStepResult
 import com.dailydevchallenge.devstreaks.model.StepInterviewPayload
 import com.dailydevchallenge.devstreaks.model.StartInterviewPayload
 import com.dailydevchallenge.devstreaks.utils.generateUUID
 import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
-// userPreferences
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
 
 
@@ -57,8 +53,7 @@ suspend fun <T> retryWithBackoff(
 }
 
 class GeminiLLMService(
-    private val client: HttpClient,
-    private val apiKey: String
+    private val client: HttpClient
 ) : LLMService {
 
     override suspend fun generateGeminiPlan(
@@ -158,49 +153,6 @@ class GeminiLLMService(
             jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), body)
         } catch (e: Exception) {
             logger.e("Failed to parse OpenAI plan response", e)
-            throw e
-        }
-    }
-
-    override suspend fun generateQuickPractice(skills: List<String>): ChallengeTask {
-        val prompt = buildQuickPracticePrompt(skills)
-        logger.i("Generating quick practice with skills: $skills")
-        logger.d("Quick practice prompt: $prompt")
-
-        val response = retryWithBackoff {
-            client.post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent") {
-                url.parameters.append("key", apiKey)
-                contentType(ContentType.Application.Json)
-                setBody(mapOf("contents" to listOf(mapOf("parts" to listOf(mapOf("text" to prompt))))))
-            }
-        }
-
-        val text = response.bodyAsText()
-        logger.d("Gemini quick practice response raw: $text")
-        val content = try {
-            Json.parseToJsonElement(text)
-                .jsonObject["candidates"]
-                ?.jsonArray?.get(0)
-                ?.jsonObject?.get("content")
-                ?.jsonObject?.get("parts")
-                ?.jsonArray?.get(0)
-                ?.jsonObject?.get("text")
-                ?.jsonPrimitive?.content ?: throw Exception("No content")
-        } catch (e: Exception) {
-            logger.e("Failed to extract quick practice content", e)
-            throw e
-        }
-
-        val cleanedJson = content
-            .removePrefix("```json")
-            .removeSuffix("```")
-            .trim()
-        logger.d("Cleaned quick practice JSON: $cleanedJson")
-
-        return try {
-            jsonFormatter.decodeFromString(ChallengeTask.serializer(), cleanedJson)
-        } catch (e: Exception) {
-            logger.e("Failed to parse ChallengeTask from quick practice", e)
             throw e
         }
     }

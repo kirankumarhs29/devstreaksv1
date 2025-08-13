@@ -152,6 +152,7 @@ class ResumeChatViewModel(
         _showFilePicker.value = false
         _uiState.update { it.copy(isLoading = false) }
     }
+
     fun startInterview() {
         logger.d("Start interview triggered")
         val analysis = _analysis.value

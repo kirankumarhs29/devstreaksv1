@@ -1,28 +1,13 @@
 package com.dailydevchallenge.devstreaks.features.challenge
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.dailydevchallenge.devstreaks.features.challenge.components.CompletionCard
-import com.dailydevchallenge.devstreaks.features.challenge.components.playSuccessSound
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
-
-enum class ChallengeStep { LEARN, DO, COMPLETE }
 
 
 @Composable
@@ -32,39 +17,26 @@ fun ChallengeFlowScreen(
     isCompleted: Boolean = false,
     onMarkAsDone: () -> Unit
 ) {
-    var currentStep by remember { mutableStateOf(ChallengeStep.LEARN) }
+    val viewModel: ChallengeDetailViewModel = remember { ChallengeDetailViewModel(task, isCompleted) }
+    val uiState by viewModel.uiState.collectAsState()
 
-    when (currentStep) {
+    when (uiState.step) {
         ChallengeStep.LEARN -> ChallengeLearnScreen(
             task = task,
-            onNext = { currentStep = ChallengeStep.DO },
+            onNext = { viewModel.goToDo() },
             navController = navController
         )
-
-        ChallengeStep.DO -> ChallengeDetailStepScreen(task,
+        ChallengeStep.DO -> ChallengeDetailStepScreen(
+            task = task,
             onMarkAsDone = {
                 onMarkAsDone()
-                currentStep = ChallengeStep.COMPLETE
+                viewModel.goToComplete()
             }
         )
         ChallengeStep.COMPLETE -> CompletionCard(
-                onDismiss = { navController.popBackStack() } ,
-                message = "Streak Achieved! 🎉 +${task.xp} XP"
-            )
-    }
-}
-
-@Composable
-fun CompletionScreen(xp: Int, onContinue: () -> Unit) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🎉 Great job!", style = MaterialTheme.typography.headlineMedium)
-            Text("+$xp XP", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onContinue) {
-                Text("Back to Home")
-            }
-        }
+            onDismiss = { navController.popBackStack() },
+            message = "Streak Achieved! 🎉 +${task.xp} XP"
+        )
     }
 }
 
@@ -80,7 +52,3 @@ fun ChallengeDetailStepScreen(
         onMarkAsDone = onMarkAsDone
     )
 }
-
-
-
-

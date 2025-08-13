@@ -1,7 +1,7 @@
 package com.dailydevchallenge.devstreaks.tts
 
 expect class TTSHelper(context: Any) {
-    fun speak(text: String)
+    fun speak(text: String, onDone: () -> Unit = {})
     fun shutdown()
 }
 
@@ -13,6 +13,6 @@ interface SpeechToTextHelper {
 }
 
 interface ConfettiSoundPlayer {
-    fun play()
+    fun play(toneType: String)
 }
 expect fun getConfettiSoundPlayer(): ConfettiSoundPlayer

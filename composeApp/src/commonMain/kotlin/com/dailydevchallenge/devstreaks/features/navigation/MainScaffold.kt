@@ -35,16 +35,21 @@ import com.dailydevchallenge.devstreaks.features.profile.ProfileScreen
 import com.dailydevchallenge.devstreaks.features.challenge.ChallengePathScreen
 import com.dailydevchallenge.devstreaks.features.devcoach.ConversationHistoryScreen
 import com.dailydevchallenge.devstreaks.features.devcoach.DevCoachScreen
+import com.dailydevchallenge.devstreaks.features.devcoach.InterviewHomeScreen
 import com.dailydevchallenge.devstreaks.features.devcoach.ResumeAndInterviewScreen
 import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.feed.ProgressWithLeaderboardScreen
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningIntentScreen
 import com.dailydevchallenge.devstreaks.features.onboarding.OnboardingViewModel
+import com.dailydevchallenge.devstreaks.features.pomodoro.PomodoroScreen
 import com.dailydevchallenge.devstreaks.features.profile.EditProfileScreen
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
+import com.dailydevchallenge.devstreaks.model.ProfileViewModel
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
+import com.dailydevchallenge.devstreaks.tts.TTSHelper
 import com.dailydevchallenge.devstreaks.utils.getLogger
+import com.mohamedrejeb.calf.core.LocalPlatformContext
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -57,10 +62,13 @@ fun MainScaffold(
     val onboardingViewModel: OnboardingViewModel = koinInject()
     val homeViewModel: HomeViewModel = koinInject()
     val resumeChatViewModel: ResumeChatViewModel = koinInject()
+    val profileViewModel: ProfileViewModel = koinInject()
 //    var shouldNavigateBack by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 //    var hasNavigatedToChallengePath by remember { mutableStateOf(false) }
     val logger = remember { getLogger() }
+    val context = LocalPlatformContext.current
+    val ttsHelper = remember { TTSHelper(context) }
 
 // this will navigate to the challenge path screen if it exists
 //    val uiState by onboardingViewModel.uiState.collectAsState()
@@ -194,13 +202,11 @@ fun MainScaffold(
                 }
                 composable(Routes.editProfile) {
                     EditProfileScreen(
+                        viewModel = profileViewModel,
+                        onSaveSuccess = { navController.popBackStack() },
                         navController
                     )
                 }
-
-
-
-
                 // Important: define the route with argument placeholder
                 composable<ChallengeDetail> { backStackEntry ->
                     val detail = backStackEntry.toRoute<ChallengeDetail>()
@@ -244,6 +250,26 @@ fun MainScaffold(
                         navController
                     )
                 }
+                // pomodoro timer
+                composable(Routes.Pomodoro) {
+                    PomodoroScreen(
+                        ttsHelper = ttsHelper,
+                        onSessionComplete = { xp, badge ->
+                            // Handle XP logic and badge toast/snackbar
+                            homeViewModel.addXP(xp)
+                            badge?.let { homeViewModel.unlockBadge(it) }
+                        },
+                        getPomodoroCount = {
+                            homeViewModel.totalPomodoroSessions
+                        }
+                    )
+                }
+
+                // interview home screen
+                composable(Routes.InterviewHome) {
+                    InterviewHomeScreen()
+                }
+
 
             }
         }

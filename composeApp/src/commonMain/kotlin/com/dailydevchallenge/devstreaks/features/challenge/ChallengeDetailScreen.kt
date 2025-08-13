@@ -2,12 +2,12 @@ package com.dailydevchallenge.devstreaks.features.challenge
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dailydevchallenge.devstreaks.features.challenge.components.ActivityPager
@@ -16,15 +16,17 @@ import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
+import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
 import com.dailydevchallenge.devstreaks.utils.getLogger
-import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+
 
 // 1. DATA MODEL (Extend if needed)
 data class ActivityPagerItem(
     val id: String,
     val type: String, // "quiz", "code", "flashcard", "project", "why", "tip", "bonus", "aiBreakdown", etc.
     val content: String? = null,
-    val challenge: ChallengeActivity? = null // Optional, for quiz or code challenges
+    val challenge: ChallengeActivity? = null
     // ...other fields if needed (quiz options, correctAns, etc.)
 )
 @Composable
@@ -34,28 +36,22 @@ fun ChallengeDetailScreen(
     isCompleted: Boolean = false,
     onMarkAsDone: () -> Unit
 ) {
-    val viewedIds = remember { mutableStateListOf<String>() }
-    val allDone = viewedIds.size >= day.challenges.size
-    var started by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    var showConfetti by remember { mutableStateOf(false) }
-    // logger
+    val viewModel: ChallengeDetailViewModel = remember { ChallengeDetailViewModel(day, isCompleted) }
+    val uiState by viewModel.uiState.collectAsState()
     val logger = remember { getLogger() }
+    val repository: ChallengeRepository = koinInject()
 
     Scaffold(
         topBar = {
             DevStreakTopBar(
                 title = "Day ${day.day}",
-                onBack = { // navigate to home
-                    logger.d("Back pressed on ChallengeDetailScreen for day ${day.day}")
-                    scope.launch {
-                        navController.popBackStack(Routes.HomeScreen, inclusive = false)
-                    }
+                onBack = {
+                    navController.popBackStack(Routes.HomeScreen, inclusive = false)
                 }
             )
         }
     ) { innerPadding ->
-        logger.d("ChallengeDetailScreen composed for day ${day.day}, isCompleted=$isCompleted, started=$started, allDone=$allDone")
+        logger.d("ChallengeDetailScreen composed for day ${day.day}, isCompleted=${uiState.isCompleted}, started=${uiState.started}, allDone=${uiState.allDone}")
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,68 +61,32 @@ fun ChallengeDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             CompactHero(day)
-            if (!started) {
-                logger.d("StartTaskCard shown for day ${day.day}")
+            if (!uiState.started) {
                 StartTaskCard {
-                    logger.d("Task started for day ${day.day}")
-                    started = true
+                    viewModel.startTask()
                 }
             } else {
-                val items: List<ActivityPagerItem> = buildFullPagerList(day)
+
                 ActivityPager(
-                    items = items,
-                    isChallengeCompleted = isCompleted,
+                    items = uiState.items,
+                    isChallengeCompleted = uiState.isCompleted,
                     onAllCompleted = {
-                        logger.d("All activities completed for day ${day.day}")
+                        viewModel.onAllCompleted()
                         onMarkAsDone()
-                        showConfetti = true
-                    }
+                    },
+                    challengeRepository = repository,
                 )
-                if (isCompleted) {
-                    logger.d("CompletionCard shown for day ${day.day}")
+                if (uiState.isCompleted && uiState.showConfetti) {
                     CompletionCard(
-                        onDismiss = { showConfetti = false },
+                        onDismiss = { viewModel.dismissConfetti() },
                         message = "Streak Achieved! 🎉 +${day.xp} XP",
                     )
-
                 }
             }
-            }
-        }
-    }
-
-fun getInjectedInsights(day: ChallengeTask): List<ActivityPagerItem> {
-    val insightCards = mutableListOf<ActivityPagerItem>()
-    day.whyItMatters?.let { insightCards += ActivityPagerItem("why", "why", it ) }
-    day.tip?.let       { insightCards += ActivityPagerItem("tip", "tip", it) }
-    day.bonus?.let     { insightCards += ActivityPagerItem("bonus", "bonus", it) }
-    day.aiBreakdown?.let { insightCards += ActivityPagerItem("aiBreakdown", "aiBreakdown", it) }
-    return insightCards
-}
-
-fun buildFullPagerList(day: ChallengeTask): List<ActivityPagerItem> {
-    // Mix insights into the flow (e.g., at the start and between activities)
-    val insights = getInjectedInsights(day)
-    val activities = day.challenges.map {
-        ActivityPagerItem(
-            id = it.id,
-            type = it.type.toString(),
-            content = it.prompt ,// or whatever field matches quiz code
-            challenge = it
-        )
-    }
-
-    // Interleave: why before 1st activity, tip after 1st, bonus after 2nd, ai after 3rd (if present)
-    return buildList {
-        var i = 0
-        if (insights.isNotEmpty()) add(insights[0])
-        for (a in activities) {
-            add(a)
-            i++
-            if (i < insights.size) add(insights[i])
         }
     }
 }
+
 
 @Composable
 fun CompactHero(day: ChallengeTask) {
@@ -135,7 +95,7 @@ fun CompactHero(day: ChallengeTask) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Day ${day.day}: ${day.title}", style = MaterialTheme.typography.titleMedium)
+            Text(" ${day.title}", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text("⭐ XP: ${day.xp}    🧩 ${day.type}", style = MaterialTheme.typography.labelSmall)
         }
@@ -154,6 +114,25 @@ fun StartTaskCard(onStart: () -> Unit) {
             Button(onClick = onStart) {
                 Text("🚀 Start Task")
             }
+        }
+    }
+}
+
+@Composable
+fun ChallengeMiniIntro(title: String, insight: String, goal: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(4.dp)) {
+            Text("📌 $title", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("💡 $insight", style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("🎯 Goal: $goal", style = MaterialTheme.typography.labelSmall)
         }
     }
 }

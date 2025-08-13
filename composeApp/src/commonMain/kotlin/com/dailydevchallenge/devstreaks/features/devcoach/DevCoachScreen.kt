@@ -1,7 +1,7 @@
 package com.dailydevchallenge.devstreaks.features.devcoach
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,14 +29,16 @@ import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
 import com.dailydevchallenge.devstreaks.llm.ChatUIMessage
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences
-// learning intent screen
 import com.dailydevchallenge.devstreaks.features.onboarding.ChatInputField
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import kotlin.time.ExperimentalTime
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
+import com.dailydevchallenge.devstreaks.features.dailyCoach.DevCoachLottieSpeakingAvatar
+import com.dailydevchallenge.devstreaks.features.dailyCoach.TTSController
+import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevCoachScreen(
     navController: NavController,
@@ -48,7 +50,7 @@ fun DevCoachScreen(
     var userInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val profile = remember { LearningProfilePreferences.getProfile() }
-    var showProfile by remember { mutableStateOf(true) }
+    var showProfileDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(chatMessages.size) {
         listState.animateScrollToItem(chatMessages.size)
@@ -65,17 +67,11 @@ fun DevCoachScreen(
                     }) {
                         Icon(Icons.Default.History, contentDescription = "History")
                     }
-                }
-            )
-        },
-        bottomBar = {
-            ChatInputField(
-                input = userInput,
-                onInputChange = { userInput = it },
-                onSend = {
-                    if (userInput.isNotBlank()) {
-                        viewModel.sendMessage(userInput)
-                        userInput = ""
+                    IconButton(onClick = { viewModel.clearChat() }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Clear Chat")
+                    }
+                    IconButton(onClick = { showProfileDialog = true }) {
+                        Icon(Icons.Default.Person, contentDescription = "Show Profile")
                     }
                 }
             )
@@ -86,55 +82,19 @@ fun DevCoachScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
-                .consumeWindowInsets(padding) // 🔑 fix
         ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 8.dp)
-                    .imePadding() // Ensures content scrolls above keyboard
-                    .imePadding()
-                    .navigationBarsPadding(),
-                reverseLayout = true // newest at bottom
             ) {
-                item {
-                    profile?.let {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            TextButton(onClick = { showProfile = !showProfile }) {
-                                Text(if (showProfile) "🔼 Hide Profile" else "🔽 Show Profile")
-                            }
+                val lastAiMessage = chatMessages.lastOrNull { it is ChatUIMessage.Received }
 
-                            AnimatedVisibility(showProfile) {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("🧑 Your Learning Profile", style = MaterialTheme.typography.titleSmall)
-                                        Spacer(Modifier.height(6.dp))
-                                        Text("🎯 Goal: ${it.goal}")
-                                        Text("💪 Skills: ${it.skills.joinToString()}")
-                                        Text("🧠 Style: ${it.style}")
-                                        Text("⏰ Time: ${it.timePerDay} for ${it.days} days")
-                                        Text("😨 Fear: ${it.fear}")
-                                        Spacer(Modifier.height(6.dp))
-                                        TextButton(onClick = { navController.navigate(Routes.editProfile) }) {
-                                            Text("Edit Profile")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                items(chatMessages) { msg ->
+                    val shouldSpeak = msg == lastAiMessage && !isTyping
+                    ChatBubble1(message = msg, shouldSpeak = shouldSpeak)
                 }
-
-                items(chatMessages.reversed()) { msg ->
-                    ChatBubble1(message = msg)
-                }
-
 
                 if (isTyping) {
                     item {
@@ -144,8 +104,59 @@ fun DevCoachScreen(
                     }
                 }
             }
+
+            ChatInputField(
+                input = userInput,
+                onInputChange = { userInput = it },
+                onSend = {
+                    if (userInput.isNotBlank()) {
+                        viewModel.sendMessage(userInput)
+                        userInput = ""
+                    }
+                }
+            )
+            if (showProfileDialog && profile != null) {
+                ProfileDialog(
+                    profile = profile,
+                    onDismissRequest = { showProfileDialog = false },
+                    onEditClicked = {
+                        showProfileDialog = false
+                        navController.navigate(Routes.editProfile)
+                    }
+                )
+            }
         }
     }
+}
+@Composable
+fun ProfileDialog(
+    profile: LearningProfile,
+    onDismissRequest: () -> Unit,
+    onEditClicked: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Your Learning Profile") },
+        text = {
+            Column {
+                Text("🎯 Goal: ${profile.goal}")
+                Text("💪 Skills: ${profile.skills.joinToString()}")
+                Text("🧠 Style: ${profile.style}")
+                Text("⏰ Time: ${profile.timePerDay} for ${profile.days} days")
+                Text("😨 Fear: ${profile.fear}")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onEditClicked) {
+                Text("Edit Profile")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 
@@ -159,24 +170,16 @@ fun DevCoachScreen(
 //    )
 //}
 
-//fun parseMarkdown(text: String): List<String> {
-//    // Simple Markdown parsing logic
-//    // This can be extended to handle more complex Markdown features
-//    return text.split("\n").map { line ->
-//        line.replace("**", "").replace("*", "") // Remove bold and italic markers
-//            .replace("`", "") // Remove inline code markers
-//            .trim() // Trim whitespace
-//    }
-//}
 
-@OptIn(ExperimentalTime::class)
 fun formatTimestamp(epochMillis: Long): String {
     val instant = Instant.fromEpochMilliseconds(epochMillis)
     val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return "${local.hour.toString().padStart(2, '0')}:${local.minute.toString().padStart(2, '0')}"
 }
 @Composable
-fun ChatBubble1(message: ChatUIMessage, isLoading: Boolean = false) {
+fun ChatBubble1(message: ChatUIMessage, isLoading: Boolean = false,
+                shouldSpeak: Boolean = false ) {
+
     val isUser = message is ChatUIMessage.Sent
     val bubbleColor = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
@@ -196,57 +199,56 @@ fun ChatBubble1(message: ChatUIMessage, isLoading: Boolean = false) {
     }
 
     val time = formatTimestamp(timestamp)
-
-    AnimatedVisibility(visible = true) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-        ) {
-            Row(verticalAlignment = Alignment.Bottom) {
-//                if (!isUser) {
-//                    Icon(
-//                        imageVector = Icons.Default.History,
-//                        contentDescription = "Bot",
-//                        modifier = Modifier.size(20.dp),
-//                        tint = MaterialTheme.colorScheme.primary
-//                    )
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                }
-
-                Surface(
-                    shape = shape,
-                    color = bubbleColor,
-                    tonalElevation = 1.dp,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 48.dp)
-                        .widthIn(max = 320.dp)
-                        .animateContentSize()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        MarkdownText(text = if (isLoading) "..." else text, color = textColor)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = time,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray,
-                            modifier = Modifier.align(
-                                if (isUser) Alignment.End else Alignment.Start
-                            )
-                        )
-                    }
+    var isSpeaking by remember { mutableStateOf(false) }
+    if (!isUser) {
+        LaunchedEffect(shouldSpeak) {
+            if (shouldSpeak) {
+                isSpeaking = true
+                TTSController.speak(text) {
+                    isSpeaking = false
                 }
-
-//                if (isUser) {
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                    Icon(
-//                        imageVector = Icons.Default.Send,
-//                        contentDescription = "You",
-//                        modifier = Modifier.size(20.dp),
-//                        tint = MaterialTheme.colorScheme.primary
-//                    )
-//                }
+            }
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    ) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Surface(
+                shape = shape,
+                color = bubbleColor,
+                tonalElevation = 1.dp,
+                modifier = Modifier
+                    .defaultMinSize(minWidth = 48.dp)
+                    .widthIn(max = 320.dp)
+                    .animateContentSize()
+                    .clickable(enabled = !isUser) {
+                        isSpeaking = true
+                        TTSController.speak(text) {
+                            isSpeaking = false
+                        }
+                    }
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    if (isUser) {
+                        MarkdownText(text = if (isLoading) "..." else text, color = textColor)
+                    } else {
+                        DevCoachLottieSpeakingAvatar(isSpeaking)
+                        MarkdownText(text = text, color = textColor)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray,
+                        modifier = Modifier.align(
+                            if (isUser) Alignment.End else Alignment.Start
+                        )
+                    )
+                }
             }
         }
     }
@@ -277,9 +279,3 @@ fun parseMarkdown(text: String): AnnotatedString {
         if (lastIndex < text.length) append(text.substring(lastIndex))
     }
 }
-
-
-
-
-
-

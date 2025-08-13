@@ -1,17 +1,20 @@
 --  UserProfile.sq
 
-CREATE TABLE User (
+CREATE TABLE Users (
   userId TEXT PRIMARY KEY,
   email TEXT NOT NULL,
   passwordHash TEXT NOT NULL,
   username TEXT NOT NULL,
   avatarUrl TEXT,
-  createdAt TEXT NOT NULL,
+  createdAt INTEGER NOT NULL,
+  lastLogin INTEGER NOT NULL,
   xp INTEGER DEFAULT 0,
   level INTEGER DEFAULT 1,
   dailyStreak INTEGER DEFAULT 0,
-  lastLogin TEXT NOT NULL,
-  preferences TEXT DEFAULT '{}'
+  streakStartDate INTEGER,
+  role TEXT DEFAULT 'user',
+  badges TEXT,
+  preferences TEXT
 );
 CREATE TABLE userProfile (
     id TEXT PRIMARY KEY,
@@ -23,15 +26,46 @@ CREATE TABLE userProfile (
     days TEXT,
     style TEXT,
     fear TEXT,
-    FOREIGN KEY (userId) REFERENCES User(userId)
+    FOREIGN KEY (userId) REFERENCES Users(userId)
 );
 CREATE TABLE UserProgress (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
     completedTaskId TEXT,
     completedDate TEXT,
-    FOREIGN KEY (userId) REFERENCES User(userId)
+    FOREIGN KEY (userId) REFERENCES Users(userId)
 );
+CREATE TABLE DailyContent (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  type TEXT NOT NULL, -- "quiz", "tip", "code", etc.
+  title TEXT,
+  content TEXT,
+  xp INTEGER DEFAULT 5
+);
+
+CREATE TABLE UserChallengeProgress (
+    userId TEXT NOT NULL,
+    challengeId TEXT NOT NULL,
+    status TEXT NOT NULL, -- PENDING, COMPLETED, FAILED
+    startedAt INTEGER NOT NULL,
+    completedAt INTEGER,
+    attempts INTEGER DEFAULT 0,
+    score INTEGER,
+    feedback TEXT,
+    hintUsed INTEGER DEFAULT 0,
+    xpEarned INTEGER DEFAULT 0,
+    timeSpentSeconds INTEGER
+);
+
+insertUserChallengeProgress:
+INSERT INTO UserChallengeProgress (
+    userId, challengeId, status, startedAt, completedAt, attempts, score, feedback, hintUsed, xpEarned, timeSpentSeconds
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectChallengeProgress:
+SELECT * FROM UserChallengeProgress WHERE userId = ? AND challengeId = ?;
+
 
 selectAllUserProgress:
 SELECT * FROM UserProgress;
@@ -53,3 +87,17 @@ SELECT * FROM UserProgress WHERE completedTaskId = ? AND userId = ?;
 
 insertUserProgress:
 INSERT INTO UserProgress(id, userId, completedTaskId, completedDate) VALUES (?, ?, ?, ?);
+
+
+insertUser:
+INSERT INTO Users (
+    userId, email, passwordHash, username, avatarUrl, createdAt, lastLogin, xp, level, dailyStreak, streakStartDate, role, badges, preferences
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateUser:
+UPDATE Users SET
+    email = ?, passwordHash = ?, username = ?, avatarUrl = ?, lastLogin = ?, xp = ?, level = ?, dailyStreak = ?, streakStartDate = ?, role = ?, badges = ?, preferences = ?
+WHERE userId = ?;
+
+getUserById:
+SELECT * FROM Users WHERE userId = ?;

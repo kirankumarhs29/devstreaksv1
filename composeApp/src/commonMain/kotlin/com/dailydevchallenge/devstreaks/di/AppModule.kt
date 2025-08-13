@@ -49,7 +49,7 @@ val appModule = module {
 
     // Network + AI
     single { getHttpClient() }
-    single<LLMService> { GeminiLLMService(get(), apiKey = "AIzaSyA6RewW_nJoIvrbm_BujSGmtVmMJ_HYot4") }
+    single<LLMService> { GeminiLLMService(get()) }
 
     single { LearningProfilePreferences }
 
@@ -57,12 +57,7 @@ val appModule = module {
     single { OnboardingViewModel(get(), get() , get()) }
     single { HomeViewModel(get(), get(), get(), get()) }
     single { DevChatViewModel(get(), get(), get()) }
-    single { (userId: String) ->
-        ProfileViewModel(
-            repo = get(),
-            userId = userId
-        )
-    }
+    single {ProfileViewModel(repo = get())}
     single { ResumeChatViewModel(get(), get(), get()) }
     single { LeaderboardViewModel(get(), get()) }
 

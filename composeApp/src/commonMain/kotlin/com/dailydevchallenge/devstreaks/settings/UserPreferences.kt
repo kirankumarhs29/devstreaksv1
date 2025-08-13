@@ -9,10 +9,11 @@ import kotlinx.serialization.json.jsonPrimitive
 object UserPreferences {
     private const val KEY_IS_LOGGED_IN = "is_logged_in"
     private const val KEY_USER_ID = "user_id"
+    private const val KEY_EMAIL_ID = "user_id"
     private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
     private const val KEY_REMINDER_HOUR = "reminder_hour"
     private const val KEY_REMINDER_MINUTE = "reminder_minute"
-    private const val latestResumeAnalysis = "resume_analysis_id"
+    private const val LATESTRESUMEANALYSIS = "resume_analysis_id"
     // store pending request for course Gemini or OpenAI
     private const val KEY_PENDING_REQUEST = "pending_request"
 
@@ -29,9 +30,15 @@ object UserPreferences {
     fun setUserId(id: String) {
         settings[KEY_USER_ID] = id
     }
+    fun setEmailId(email: String) {
+        settings[KEY_EMAIL_ID] = email
+    }
 
     private fun getUserId(): String? {
         return settings.getStringOrNull(KEY_USER_ID)
+    }
+    fun getEmailId(): String? {
+        return settings.getStringOrNull(KEY_EMAIL_ID)
     }
     fun setNotificationsEnabled(enabled: Boolean) {
         settings[KEY_NOTIFICATIONS_ENABLED] = enabled
@@ -55,13 +62,14 @@ object UserPreferences {
     fun logout() {
         settings[KEY_IS_LOGGED_IN] = false
         settings.remove(KEY_USER_ID)
+        settings.remove(KEY_EMAIL_ID)
         settings.remove(KEY_NOTIFICATIONS_ENABLED)
     }
     fun getSafeUserId(): String {
         return getUserId() ?: throw IllegalStateException("User ID not found in preferences")
     }
     fun getGetLatestResume(): String? {
-        return settings.getStringOrNull(latestResumeAnalysis)
+        return settings.getStringOrNull(LATESTRESUMEANALYSIS)
     }
     fun savePendingRequest(request: String) {
         settings[KEY_PENDING_REQUEST] = request

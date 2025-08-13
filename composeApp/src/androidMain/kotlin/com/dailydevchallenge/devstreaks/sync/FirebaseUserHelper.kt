@@ -1,6 +1,7 @@
 package com.dailydevchallenge.devstreaks.sync
 
 import com.dailydevchallenge.devstreaks.features.feed.UserStats
+import com.dailydevchallenge.devstreaks.model.User
 import com.dailydevchallenge.devstreaks.repository.PublicUserProfile
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -44,11 +45,12 @@ class FirebaseUserHelperAndroid : FirebaseUserHelper {
                     userId = doc.id,
                     name = doc.getString("name") ?: "(anon)",
                     xp = doc.getLong("xp")?.toInt() ?: 0,
-                    streak = doc.getLong("streak")?.toInt() ?: 0
+                    streak = doc.getLong("streak")?.toInt() ?: 0,
+                    logicScore = doc.getLong("logicScore")?.toInt() ?: 0,
                 )
             }
         }
-        override suspend fun updateUserProgress(userId: String, xp: Int, streak: Long?) {
+        override suspend fun updateUserProgress(userId: String, xp: Long, streak: Long?) {
             val db = FirebaseFirestore.getInstance()
             logger().d("FirebaseUserHelperAndroid", "updateUserProgress: userId = $userId, xp = $xp, streak = $streak")
             val userDoc = db.collection("users").document(userId)
@@ -69,8 +71,35 @@ class FirebaseUserHelperAndroid : FirebaseUserHelper {
                     userId = doc.id,
                     name = doc.getString("name") ?: "(anon)",
                     xp = doc.getLong("xp")?.toInt() ?: 0,
-                    streak = doc.getLong("streak")?.toInt() ?: 0
+                    streak = doc.getLong("streak")?.toInt() ?: 0,
+                    logicScore = doc.getLong("logicScore")?.toInt() ?: 0
                 )
             } else null
         }
+
+    override suspend fun getCurrentUserdata(userId: String, email: String): User {
+        val db = FirebaseFirestore.getInstance()
+        logger().d("FirebaseUserHelperAndroid", "getCurrentUserdata: userId = $userId, email = $email")
+        val doc = db.collection("users").document(userId).get().await()
+        val name = doc.getString("name") ?: "DevStreaker"
+        val xp = doc.getLong("xp")?.toInt() ?: 0
+        val streak = doc.getLong("streak")?.toInt() ?: 0
+        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        return User(
+            userId = userId,
+            email = email,
+            passwordHash = "", // Not stored in Firestore
+            username = name,
+            avatarUrl = null,
+            createdAt = now,
+            lastLogin = now,
+            xp = xp,
+            level = 1,
+            dailyStreak = streak.toLong(),
+            streakStartDate = null,
+            preferences = emptyMap(),
+            role = "user",
+            badges = emptyList()
+        )
+    }
 }

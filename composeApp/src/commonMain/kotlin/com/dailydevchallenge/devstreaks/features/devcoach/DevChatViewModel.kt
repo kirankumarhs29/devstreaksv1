@@ -21,8 +21,12 @@ class DevChatViewModel(
     private val profilePreferences: LearningProfilePreferences
 ) : ViewModel() {
 
+    private var messageId = 0
     val chatMessages = mutableStateListOf<ChatUIMessage>()
     var isTyping by mutableStateOf(false)
+        private set
+
+    private var messageInput by mutableStateOf("")
 
     init {
         viewModelScope.launch {
@@ -37,6 +41,9 @@ class DevChatViewModel(
                 }
             )
         }
+    }
+    fun onMessageChange(newText: String) {
+        messageInput = newText
     }
 
     fun sendMessage(userInput: String) {
@@ -62,6 +69,7 @@ class DevChatViewModel(
                 isTyping = false
             }
         }
+        messageInput = ""
     }
     fun loadAllConversations(): List<Conversation> {
         return runBlocking {
@@ -74,6 +82,14 @@ class DevChatViewModel(
             memoryRepo.deleteAllMemory()
             onDone()
         }
+    }
+    fun clearChat() {
+        chatMessages.clear()
+        isTyping = false
+        viewModelScope.launch {
+            memoryRepo.deleteAllMemory()
+        }
+        chatMessages.add(ChatUIMessage.Received("Chat cleared. Ask me anything"))
     }
 
 }

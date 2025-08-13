@@ -10,7 +10,7 @@ import com.dailydevchallenge.devstreaks.features.feed.UserStats
 class UserStatsManager(private val repository: ChallengeRepository) {
 
     private val _userStats = MutableStateFlow(UserStats(userId = "", name = "Dev", xp = 0, streak =
-        0))
+        0, logicScore = 0))
     val userStats: StateFlow<UserStats> = _userStats.asStateFlow()
 
     private val _lastCompletedDate = MutableStateFlow<String?>(null)

@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.dailydevchallenge.devstreaks.features.dailyCoach.DevCoachLottieAvatar
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 
@@ -37,6 +38,7 @@ fun ChallengeLearnScreen(
 
             Spacer(Modifier.height(12.dp))
             Text(task.whyItMatters ?: "Why this challenge matters...", style = MaterialTheme.typography.bodyMedium)
+            DevCoachLottieAvatar()
 
             task.tip?.let {
                 Spacer(Modifier.height(12.dp))

@@ -31,6 +31,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.dailydevchallenge.devstreaks.features.challenge.components.ChallengeStoryMissionCard
+import com.dailydevchallenge.devstreaks.features.challenge.components.CoachDialogueCard
 import com.dailydevchallenge.devstreaks.features.routes.LearnRoute
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
@@ -152,13 +154,29 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
                     )
                 }
 //            }
-             if (today != null) {
-                    item {
-                        HeroBanner(task = today!!) {
-                                navController.navigate(LearnRoute(today!!.id))
-                        }
+            if (today != null) {
+                item {
+                    CoachDialogueCard(
+                        level = level,
+                        logicScore = stats.logicScore
+                    )
+                }
+
+                item {
+                    ChallengeStoryMissionCard(
+                        title = "Spot the Logic Flaw",
+                        emoji = "🧠",
+                        narrative = "You're reviewing your teammate's code today. Can you catch the bug before it hits production?"
+                    )
+                }
+
+                item {
+                    HeroBanner(task = today!!) {
+                        navController.navigate(LearnRoute(today!!.id))
                     }
+                }
             }
+
 
             groupedTasks.forEach { (type, group) ->
                 item {
@@ -214,8 +232,9 @@ fun HomeScreen(navController: NavController, viewModel: HomeViewModel = koinInje
                         navController.navigate(Routes.Progress)
                     }
 
-                    SheetOption("🧩 Quick Practice Task") {
+                    SheetOption("Interview Home") {
                         showSheet = false
+                        navController.navigate(Routes.InterviewHome)
                     }
 
                     SheetOption("🔁 Review My Resume") {
@@ -582,6 +601,3 @@ fun WelcomeHeroCard(
         }
     }
 }
-
-
-

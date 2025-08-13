@@ -102,6 +102,7 @@ activityKtx = "1.10.1"
 firebaseMessagingKtx = "24.1.2"
 firebaseCrashlyticsKtx = "19.4.4"
 annotationJvm = "1.9.1"
+runtimeJvmstubs = "1.8.3"
 
 
 [libraries]
@@ -225,6 +226,7 @@ androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", ve
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 google-firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
 androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
+androidx-runtime-jvmstubs = { group = "androidx.compose.runtime", name = "runtime-jvmstubs", version.ref = "runtimeJvmstubs" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

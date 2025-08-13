@@ -44,19 +44,19 @@ actual class TTSHelper actual constructor(context: Any) {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    actual fun speak(text: String) {
+    actual fun speak(text: String, onDone: () -> Unit) {
         val cleanedText = cleanTextForTTS(text)
         CoroutineScope(Dispatchers.Main).launch {
             val cacheFile = audioCache[cleanedText]
             if (cacheFile != null && cacheFile.exists()) {
-                playMp3(cacheFile)
+                playMp3(cacheFile, onDone)
             } else {
                 val bytes = try { fetchCloudTTS(cleanedText) } catch (_: Exception) { null }
                 if (bytes != null) {
                     val tempFile = File.createTempFile("cloud_tts", ".mp3", androidContext.cacheDir)
                     tempFile.writeBytes(bytes)
                     audioCache[cleanedText] = tempFile
-                    playMp3(tempFile)
+                    playMp3(tempFile, onDone)
                 } else {
                     // Fallback to local TTS
                     tts.speak(cleanedText, TextToSpeech.QUEUE_FLUSH, null, null)
@@ -104,19 +104,20 @@ actual class TTSHelper actual constructor(context: Any) {
     }
 
     // Play MP3 bytes using MediaPlayer
-    private fun playMp3(file: File) {
+    private fun playMp3(file: File,onDone: () -> Unit = {}) {
         // Save to temp file then play
         mediaPlayer?.stop()
         mediaPlayer?.release()
-//        val tempFile = File.createTempFile("cloud_tts", ".mp3", androidContext.cacheDir)
-//        tempFile.writeBytes(bytes)
         mediaPlayer = MediaPlayer().apply {
             setDataSource(file.absolutePath)
+            setOnCompletionListener {
+                onDone()
+            }
             prepare()
             start()
         }
     }
-    fun cleanTextForTTS(text: String): String {
+    private fun cleanTextForTTS(text: String): String {
         return text
             .replace("`", "") // Remove backticks
             .replace("*", "") // Remove asterisks

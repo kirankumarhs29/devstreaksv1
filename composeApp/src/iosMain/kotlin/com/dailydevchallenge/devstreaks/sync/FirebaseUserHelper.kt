@@ -28,7 +28,7 @@ class FirebaseUserHelperIos : FirebaseUserHelper {
             )
         }
     }
-    override suspend fun updateUserProgress(userId: String, xp: Int, streak: Long?) {
+    override suspend fun updateUserProgress(userId: String, xp: Long, streak: Long?) {
         val db = Firebase.firestore
         db.collection("users").document(userId).update(mapOf("xp" to xp, "streak" to streak))
     }

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import com.dailydevchallenge.database.UserProgress
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
+import com.dailydevchallenge.devstreaks.model.EngagementRecord
 import com.dailydevchallenge.devstreaks.model.TaskReflection
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import com.google.firebase.firestore.FirebaseFirestore
@@ -100,6 +101,17 @@ object FirestoreHelper {
             prefix = "{", postfix = "}"
         ) { (k, v) -> "\"$k\":${mapToJsonValue(v)}" }
     }
+    suspend fun uploadEngagementData(record: EngagementRecord) {
+        try {
+            db.collection("engagement_data")
+                .add(record)
+                .await()
+            println("✅ Engagement saved")
+        } catch (e: Exception) {
+            println("❌ Failed: ${e.message}")
+        }
+    }
+
 
 
 

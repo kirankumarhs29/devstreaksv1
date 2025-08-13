@@ -3,7 +3,7 @@ package com.dailydevchallenge.devstreaks.repository
 import com.dailydevchallenge.devstreaks.features.devcoach.MemoryItem
 
 interface MemoryRepository {
-    suspend fun getRecentMemory(limit: Int = 3): List<MemoryItem>
+    suspend fun getRecentMemory(limit: Int = 5): List<MemoryItem>
     suspend fun getAllMemory(): List<MemoryItem>    // ✅ Add this
     suspend fun saveConversation(question: String, answer: String)
     suspend fun updateFeedback(id: String, feedback: String)

@@ -84,7 +84,7 @@ fun CompletionCard(
 }
 
 @Composable
-fun playSuccessSound() {
+fun playSuccessSound(toneType:String = "success") {
     val soundPlayer = remember { getConfettiSoundPlayer() }
-    soundPlayer.play()
+    soundPlayer.play(toneType)
 }

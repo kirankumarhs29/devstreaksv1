@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.dailydevchallenge.devstreaks.model.User
 
 private lateinit var appContext: Context
 

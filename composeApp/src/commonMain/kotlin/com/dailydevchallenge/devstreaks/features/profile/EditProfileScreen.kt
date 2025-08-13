@@ -13,19 +13,18 @@ import org.koin.core.parameter.parametersOf
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
+import com.mohamedrejeb.calf.core.LocalPlatformContext
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
+    viewModel: ProfileViewModel = koinInject(),
+    onSaveSuccess: () -> Unit,
     navController: NavController
 ) {
     val userId = UserPreferences.getSafeUserId()
-    val viewModel: ProfileViewModel = koinInject(parameters = { parametersOf(userId) })
-    // to ViewModel
-
-    val profile by viewModel.profile.collectAsState() // ✅ use collectAsState if it's a Flow or MutableStateFlow
-
+    val profile by viewModel.profile.collectAsState()
 
     // UI state...
     var goal by remember { mutableStateOf("") }

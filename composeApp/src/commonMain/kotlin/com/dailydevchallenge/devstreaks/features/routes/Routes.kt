@@ -9,7 +9,7 @@ object Routes {
     // forget password
     const val ForgotPassword = "forgot_password"
     const val LearningIntent = "learning_intent"
-//    const val ChallengeLoading = "challenge_loading"
+    const val InterviewHome = "interview_home"
 
     const val MainScaffold = "main_scaffold"
     const val HomeScreen = "home"
@@ -23,6 +23,7 @@ object Routes {
     const val clearDevChat = "conversation_history"
     const val editProfile = "edit_profile"
     const val ResumeAnalysis = "resumeAnalysis"
+    const val Pomodoro = "pomodoro"
 
 //    const val PathDetail = "path_detail/{pathId}"
 //    fun pathDetailRoute(pathId: String) = "path_detail/$pathId"

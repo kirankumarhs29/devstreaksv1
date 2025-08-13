@@ -17,8 +17,13 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
+import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
+import com.dailydevchallenge.devstreaks.model.ProfileViewModel
+import com.dailydevchallenge.devstreaks.model.UserInfoViewModel
 import com.dailydevchallenge.devstreaks.settings.DarkModeSettings
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import org.koin.compose.koinInject
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun ProfileScreen(
@@ -30,6 +35,23 @@ fun ProfileScreen(
 
     val tabHeaderHeightPx = remember { mutableStateOf(0) }
     val density = LocalDensity.current
+    val userId = UserPreferences.getSafeUserId()
+    val profileViewModel: ProfileViewModel = koinInject(parameters = { parametersOf(userId) })
+    val profileEditViewModel: ProfileEditViewModel = koinInject(parameters = { parametersOf(userId) })
+    val userInfoViewModel: UserInfoViewModel = koinInject()
+    val learningProfile by profileViewModel.profile.collectAsState()
+    val userProfile by profileEditViewModel.user.collectAsState()
+    val userInfo by userInfoViewModel.profile.collectAsState()
+    var isEditingProfile by remember { mutableStateOf(false) }
+
+    if (isEditingProfile) {
+        ProfileEditScreen(
+            viewModel = koinInject(),
+            onSaveSuccess = { isEditingProfile = false }
+        )
+        return
+    }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -38,7 +60,7 @@ fun ProfileScreen(
                     tabHeaderHeightPx.value = coordinates.size.height
                 }
         ) {
-            ProfileHeader(viewModel)
+            learningProfile?.let { ProfileHeader(viewModel, it, onEditProfile = { isEditingProfile = true }) }
 
             TabRow(selectedTabIndex = selectedTabIndex) {
                 tabs.forEachIndexed { index, title ->
@@ -66,7 +88,11 @@ fun ProfileScreen(
 
 
 @Composable
-fun ProfileHeader(viewModel: HomeViewModel) {
+fun ProfileHeader(
+    viewModel: HomeViewModel,
+    learningProfile: LearningProfile,
+    onEditProfile: () -> Unit
+) {
     val stats by viewModel.userStats.collectAsState()
     val level = stats.xp / 100
     val isDark by DarkModeSettings.darkModeFlow.collectAsState()
@@ -135,6 +161,26 @@ fun ProfileHeader(viewModel: HomeViewModel) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                text = "🎯 Goal: ${learningProfile.goal}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "🛠 Skills: ${learningProfile.skills.joinToString()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onEditProfile,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Edit Profile", color = Color.White)
+            }
         }
     }
 }

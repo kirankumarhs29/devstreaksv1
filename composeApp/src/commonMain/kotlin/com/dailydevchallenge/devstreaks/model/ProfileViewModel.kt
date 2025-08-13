@@ -5,15 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 import com.dailydevchallenge.devstreaks.repository.ProfileRepository
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
-    private val repo: ProfileRepository,
-    private val userId: String
+    private val repo: ProfileRepository
 ) : ViewModel() {
+    private val userId  =  UserPreferences.getSafeUserId()
 
     private val _profile = MutableStateFlow<LearningProfile?>(null)
     val profile: StateFlow<LearningProfile?> = _profile.asStateFlow()

@@ -2,7 +2,10 @@ package com.dailydevchallenge.devstreaks.features.home
 
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.dailydevchallenge.devstreaks.features.feed.UserStats
 import com.dailydevchallenge.devstreaks.llm.LLMService
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
@@ -62,6 +65,28 @@ class HomeViewModel(
 
     private val _isCourseLoading = MutableStateFlow(false)
     val isCourseLoading: StateFlow<Boolean> = _isCourseLoading.asStateFlow()
+    var xp by mutableStateOf(0)
+        private set
+    var totalPomodoroSessions by mutableStateOf(0)
+        private set
+    val earnedBadges = mutableStateListOf<String>()
+    fun incrementPomodoroSession() {
+        totalPomodoroSessions++
+    }
+    fun unlockBadge(name: String) {
+        if (!earnedBadges.contains(name)) {
+            earnedBadges.add(name)
+        }
+    }
+    fun addXP(amount: Int) {
+        xp += amount
+    }
+    fun resetProgress() {
+        xp = 0
+        totalPomodoroSessions = 0
+        earnedBadges.clear()
+    }
+
 
     fun loadGeneratedCourse(requestId: String) {
         viewModelScope.launch {
@@ -193,12 +218,6 @@ class HomeViewModel(
         val userId = UserPreferences.getSafeUserId()
         return runBlocking {
             repository.isTaskCompleted(taskId, userId)
-        }
-    }
-    fun generateQuickPractice() {
-        viewModelScope.launch {
-            val task = llmService.generateQuickPractice(skills) // inject skills
-            _quickPractice.value = task
         }
     }
 //    fun markOnboardingComplete() {

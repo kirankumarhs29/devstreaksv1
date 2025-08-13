@@ -8,8 +8,15 @@ import com.dailydevchallenge.devstreaks.session.getAppContext
 
 
 class AndroidConfettiSoundPlayer(private val context: Context) : ConfettiSoundPlayer {
-    override fun play() {
-        val mediaPlayer = MediaPlayer.create(context, R.raw.success)
+    override fun play(toneType: String) {
+        var tones = 0
+        if (toneType == "success") {
+            tones = R.raw.success
+        }
+        if (toneType == "correct") {
+            tones = R.raw.correct
+        }
+        val mediaPlayer = MediaPlayer.create(context, tones)
         mediaPlayer?.start()
         mediaPlayer.setOnCompletionListener {
             it.release()

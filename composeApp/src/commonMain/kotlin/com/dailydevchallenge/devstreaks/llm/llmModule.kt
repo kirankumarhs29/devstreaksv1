@@ -7,8 +7,8 @@ val llmModule = module {
 
     single { getHttpClient() }
     single<LLMService> {
-        GeminiLLMService(get(),
-            apiKey = "AIzaSyA6RewW_nJoIvrbm_BujSGmtVmMJ_HYot4"
+        GeminiLLMService(
+            get()
         )
     }
 }
