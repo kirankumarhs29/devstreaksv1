@@ -6,7 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.dailydevchallenge.devstreaks.features.feed.UserStats
+import com.dailydevchallenge.devstreaks.model.UserStats
 import com.dailydevchallenge.devstreaks.llm.LLMService
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
@@ -18,22 +18,19 @@ import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.repository.LeaderboardRepository
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import kotlinx.datetime.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dailydevchallenge.devstreaks.model.User
+import com.dailydevchallenge.devstreaks.repository.UserProgressRepository
 
 
 class HomeViewModel(
     private val repository: ChallengeRepository,
     private val profilePreferences: LearningProfilePreferences,
     private val llmService: LLMService,
-    private val lRepository: LeaderboardRepository
-) {
-
-    private val viewModelScope = CoroutineScope(
-        SupervisorJob() + Dispatchers.Main + CoroutineExceptionHandler { _, throwable ->
-            println("Error in ViewModel scope: ${throwable.message}")
-        }
-    )
-
-    private val statsManager = UserStatsManager(repository)
+    private val lRepository: LeaderboardRepository,
+    private val userStatsManager: UserStatsManager
+) : ViewModel() {
 
     private val _tasks = MutableStateFlow<List<ChallengeTask>>(emptyList())
     val tasks: StateFlow<List<ChallengeTask>> = _tasks.asStateFlow()
@@ -44,7 +41,7 @@ class HomeViewModel(
     private val _completedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val completedTaskIds: StateFlow<Set<String>> = _completedTaskIds.asStateFlow()
 
-    val userStats: StateFlow<UserStats> = statsManager.userStats
+    val userStats: StateFlow<UserStats> = userStatsManager.userStats
     private val _profile = MutableStateFlow<LearningProfile?>(null)
     val profile: StateFlow<LearningProfile?> = _profile.asStateFlow()
     private val _startDate = MutableStateFlow<LocalDate>(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date)
@@ -138,7 +135,7 @@ class HomeViewModel(
         loadLatestChallenges()
         loadProfile()
         viewModelScope.launch {
-            statsManager.loadStats()
+            userStatsManager.loadStats()
             loadActivityChart()
         }
     }
@@ -175,7 +172,18 @@ class HomeViewModel(
         val userId = UserPreferences.getSafeUserId()
         viewModelScope.launch {
             if (repository.isTaskCompleted(taskId, userId)) return@launch
-            statsManager.refreshAfterTaskCompletion(taskId, xpEarned)
+
+            // Mark task as completed in the repository
+            repository.markTaskCompleted(taskId, xpEarned, userId)
+
+            // Update stats through the stats manager
+            val task = repository.getTaskById(taskId)
+            if (task != null) {
+                userStatsManager.onChallengeCompleted(task.pathId, task.day, xpEarned)
+            }
+
+            // Refresh the stats and reload challenges
+            userStatsManager.refreshAfterTaskCompletion(taskId, xpEarned)
             loadLatestChallenges()
         }
     }
@@ -203,11 +211,11 @@ class HomeViewModel(
 
     fun reloadStats() {
         viewModelScope.launch {
-            statsManager.loadStats()
+            userStatsManager.loadStats()
         }
     }
 
-    fun onCleared() {
+    override fun onCleared() {
         viewModelScope.cancel()
     }
 

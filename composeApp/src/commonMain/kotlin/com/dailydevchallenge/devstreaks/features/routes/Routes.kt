@@ -34,4 +34,10 @@ object Routes {
 //    const val ChallengeDetail = "challenge_detail/{challengeId}"
 //    fun challengeDetailRoute(challengeId: String) = "challenge_detail/$challengeId"
 
+    // New Firebase-powered features
+    const val Leaderboard = "leaderboard"
+    const val Subscription = "subscription"
+    const val Friends = "friends"
+    const val AIHub = "aihub"
+    const val ActivityFeed = "activity_feed"
 }

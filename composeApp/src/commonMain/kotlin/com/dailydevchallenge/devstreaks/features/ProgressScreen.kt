@@ -27,9 +27,10 @@ fun ProgressScreen(
     viewModel: HomeViewModel = koinInject()
 ) {
     val stats by viewModel.userStats.collectAsState()
-    val level = stats.xp / 100
-    val nextXP = 100 - (stats.xp % 100)
-    val progress = (stats.xp % 100).toFloat() / 100f
+    // Fix: Use correct properties from model UserStats
+    val level = stats.level
+    val nextXP = 100 - (stats.totalXp % 100)
+    val progress = (stats.totalXp % 100).toFloat() / 100f
     val animatedProgress by animateFloatAsState(targetValue = progress)
     val eta by viewModel.estimatedEndDate.collectAsState()
     val completedCount by viewModel.completedTaskIds.collectAsState()
@@ -74,7 +75,7 @@ fun ProgressScreen(
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Level $level", style = MaterialTheme.typography.titleMedium)
-                Text("${stats.xp} XP", style = MaterialTheme.typography.labelMedium)
+                Text("${stats.totalXp} XP", style = MaterialTheme.typography.labelMedium)
                 Text("+$nextXP XP to next", style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -88,7 +89,7 @@ fun ProgressScreen(
                 Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("🔥 ${stats.streak}-Day Streak", fontSize = 20.sp)
+                Text("🔥 ${stats.currentStreak}-Day Streak", fontSize = 20.sp)
                 Text(
                     "You're building a real habit. Keep it going!",
                     style = MaterialTheme.typography.bodySmall,
@@ -101,15 +102,15 @@ fun ProgressScreen(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            StatCard("⭐ Total XP", "${stats.xp}")
-            StatCard("📅 Days Active", "${stats.streak}")
+            StatCard("⭐ Total XP", "${stats.totalXp}")
+            StatCard("📅 Days Active", "${stats.currentStreak}")
         }
 
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            StatCard("✅ Challenges", "${completedCount.size}")
+            StatCard("�� Challenges", "${completedCount.size}")
             StatCard("🛤️ Track", track)
         }
 

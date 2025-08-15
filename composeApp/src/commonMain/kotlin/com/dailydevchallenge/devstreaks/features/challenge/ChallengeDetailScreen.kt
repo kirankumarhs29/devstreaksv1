@@ -11,9 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dailydevchallenge.devstreaks.features.challenge.components.ActivityPager
+import com.dailydevchallenge.devstreaks.features.challenge.components.AIFeedbackDialog
 import com.dailydevchallenge.devstreaks.features.challenge.components.CompletionCard
+import com.dailydevchallenge.devstreaks.features.home.UserStatsManager
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
+import com.dailydevchallenge.devstreaks.llm.AIFeedbackService
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
@@ -36,10 +39,22 @@ fun ChallengeDetailScreen(
     isCompleted: Boolean = false,
     onMarkAsDone: () -> Unit
 ) {
-    val viewModel: ChallengeDetailViewModel = remember { ChallengeDetailViewModel(day, isCompleted) }
-    val uiState by viewModel.uiState.collectAsState()
-    val logger = remember { getLogger() }
     val repository: ChallengeRepository = koinInject()
+    val userStatsManager: UserStatsManager = koinInject()
+    val aiFeedbackService: AIFeedbackService = koinInject()
+    val viewModel: ChallengeDetailViewModel = remember {
+        ChallengeDetailViewModel(repository, userStatsManager, aiFeedbackService)
+    }
+    val uiState by viewModel.uiState.collectAsState()
+    val aiFeedback by viewModel.aiFeedback.collectAsState()
+    val isGeneratingFeedback by viewModel.isGeneratingFeedback.collectAsState()
+    val showFeedbackDialog by viewModel.showFeedbackDialog.collectAsState()
+    val logger = remember { getLogger() }
+
+    // Load the task when the screen is first displayed
+    LaunchedEffect(day.id) {
+        viewModel.loadTask(day.id)
+    }
 
     Scaffold(
         topBar = {
@@ -71,8 +86,9 @@ fun ChallengeDetailScreen(
                     items = uiState.items,
                     isChallengeCompleted = uiState.isCompleted,
                     onAllCompleted = {
+                        // Only handle UI state here
                         viewModel.onAllCompleted()
-                        onMarkAsDone()
+                        // Don't call onMarkAsDone() here - it's called from ViewModel
                     },
                     challengeRepository = repository,
                 )
@@ -83,6 +99,20 @@ fun ChallengeDetailScreen(
                     )
                 }
             }
+        }
+
+        // AI Feedback Dialog
+        AIFeedbackDialog(
+            feedback = aiFeedback,
+            isLoading = isGeneratingFeedback,
+            onDismiss = { viewModel.dismissFeedbackDialog() }
+        )
+    }
+
+    // Listen for completion from ViewModel
+    LaunchedEffect(uiState.isCompleted) {
+        if (uiState.isCompleted && !isCompleted) {
+            onMarkAsDone() // Call only once when state changes
         }
     }
 }
@@ -136,4 +166,3 @@ fun ChallengeMiniIntro(title: String, insight: String, goal: String) {
         }
     }
 }
-

@@ -43,4 +43,28 @@ class FirebaseUserHelperIos : FirebaseUserHelper {
             )
         } else null
     }
+
+    override suspend fun updateUserInFirestore(user: User) {
+        try {
+            val userDoc = Firebase.firestore.collection("users").document(user.userId)
+
+            val updateData = mapOf(
+                "username" to user.username,
+                "name" to user.username, // Keep both for compatibility
+                "email" to user.email,
+                "avatarUrl" to user.avatarUrl,
+                "xp" to user.xp.toLong(),
+                "level" to (user.level ?: 1),
+                "streak" to (user.dailyStreak ?: 0),
+                "lastLogin" to user.lastLogin,
+                "role" to user.role
+            )
+
+            userDoc.update(updateData)
+            println("iOS: Successfully updated user ${user.userId} in Firestore")
+        } catch (e: Exception) {
+            println("iOS: Failed to update user in Firestore: ${e.message}")
+            throw e
+        }
+    }
 }

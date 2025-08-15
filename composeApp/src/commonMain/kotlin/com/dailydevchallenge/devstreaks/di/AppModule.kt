@@ -7,10 +7,15 @@ import com.dailydevchallenge.devstreaks.database.ChallengeDatabase
 import com.dailydevchallenge.devstreaks.database.DatabaseDriverFactory
 import com.dailydevchallenge.devstreaks.llm.GeminiLLMService
 import com.dailydevchallenge.devstreaks.llm.LLMService
+import com.dailydevchallenge.devstreaks.llm.AIFeedbackService
+import com.dailydevchallenge.devstreaks.ai.UnifiedAICoachService
+import com.dailydevchallenge.devstreaks.ai.AIContextManager
+import com.dailydevchallenge.devstreaks.ai.UserContextManager
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
 import org.koin.dsl.module
 import com.dailydevchallenge.devstreaks.network.getHttpClient
 import com.dailydevchallenge.devstreaks.auth.AuthService
+import com.dailydevchallenge.devstreaks.features.home.UserStatsManager
 
 import com.dailydevchallenge.devstreaks.auth.getAuthService
 import com.dailydevchallenge.devstreaks.features.devcoach.DevChatViewModel
@@ -18,7 +23,7 @@ import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences
 import com.dailydevchallenge.devstreaks.features.onboarding.OnboardingViewModel
-import com.dailydevchallenge.devstreaks.model.LeaderboardViewModel
+import com.dailydevchallenge.devstreaks.features.leaderboard.LeaderboardViewModel
 import com.dailydevchallenge.devstreaks.model.ProfileViewModel
 import com.dailydevchallenge.devstreaks.repository.JournalRepository
 import com.dailydevchallenge.devstreaks.repository.JournalRepositoryImpl
@@ -26,6 +31,8 @@ import com.dailydevchallenge.devstreaks.repository.MemoryRepository
 import com.dailydevchallenge.devstreaks.repository.MemoryRepositoryImpl
 import com.dailydevchallenge.devstreaks.repository.ProfileRepository
 import com.dailydevchallenge.devstreaks.repository.ProfileRepositoryImpl
+import com.dailydevchallenge.devstreaks.repository.ResumeAnalysisRepository
+import com.dailydevchallenge.devstreaks.repository.InterviewRepository
 
 val appModule = module {
 
@@ -37,10 +44,16 @@ val appModule = module {
         ChallengeDatabase(driver)
     }
     single { get<ChallengeDatabase>().challengePathQueries }
+    single { get<ChallengeDatabase>().resumeAnalysisQueries }
     single { ChallengeRepository(get(),get(), get()) }
     single<JournalRepository> { JournalRepositoryImpl(get()) }
     single <MemoryRepository>{ MemoryRepositoryImpl(get()) }
     single<ProfileRepository> { ProfileRepositoryImpl(get()) }
+
+    // Missing AI-related repositories
+    single { ResumeAnalysisRepository(get()) }
+    single { InterviewRepository(get()) }
+
     single<JournalQueries> {
         get<ChallengeDatabase>().journalQueries
     }
@@ -51,14 +64,21 @@ val appModule = module {
     single { getHttpClient() }
     single<LLMService> { GeminiLLMService(get()) }
 
+    // AI Services (new unified architecture)
+    single { UserContextManager(get(), get(), get(), get(), get(), get()) }
+    single { AIFeedbackService(get(), get()) }
+    single { UserStatsManager(get()) }
+    single { AIContextManager() }
+    single { UnifiedAICoachService(get(), get(), get(), get()) }
+
     single { LearningProfilePreferences }
 
-    // ViewModels
-    single { OnboardingViewModel(get(), get() , get()) }
-    single { HomeViewModel(get(), get(), get(), get()) }
-    single { DevChatViewModel(get(), get(), get()) }
+    // ViewModels - Updated to use unified AI service
+    single { OnboardingViewModel(get(), get(), get(), get()) }
+    single { HomeViewModel(get(), get(), get(), get(), get()) }
+    single { DevChatViewModel(get(), get(), get(), get(), get()) }
     single {ProfileViewModel(repo = get())}
-    single { ResumeChatViewModel(get(), get(), get()) }
-    single { LeaderboardViewModel(get(), get()) }
+    single { ResumeChatViewModel(get(), get(), get(), get(), get()) }
+    single { LeaderboardViewModel(get())}
 
 }

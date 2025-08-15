@@ -28,6 +28,20 @@ interface FirebaseUserHelper {
     suspend fun updateUserProgress(userId: String, xp: Long, streak: Long?)
     suspend fun fetchUserProgress(userId: String): UserStats?
     suspend fun getCurrentUserdata(userId: String, email: String) : User
+    suspend fun updateUserInFirestore(user: User) // Add this method
+
+    // Enhanced methods for leaderboards and social features
+    suspend fun getTopUsersByXP(limit: Int = 100): List<User>
+    suspend fun getTopUsersByWeeklyXP(startOfWeek: kotlinx.datetime.Instant, limit: Int = 100): List<Pair<User, Int>>
+    suspend fun getTopUsersByMonthlyXP(startOfMonth: kotlinx.datetime.Instant, limit: Int = 100): List<Pair<User, Int>>
+    suspend fun getTopUsersByStreak(limit: Int = 100): List<User>
+    suspend fun getUserGlobalRank(userId: String): Int
+    suspend fun getUserFriends(userId: String): List<User>
+    suspend fun addFriend(userId: String, friendUserId: String)
+    suspend fun removeFriend(userId: String, friendUserId: String)
+    suspend fun recordXpGain(userId: String, xpGained: Int, source: String)
+    suspend fun updateUserStats(userId: String, xpGained: Int, streakIncrement: Int = 0)
+    suspend fun getUserProfile(userId: String): User
 }
 
 expect fun getPlatformFirebaseUserHelper(): FirebaseUserHelper

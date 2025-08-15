@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import com.dailydevchallenge.devstreaks.ai.UnifiedAICoachService
+import com.dailydevchallenge.devstreaks.ai.UserContextManager
 
 sealed class ChatMessage {
     data class User(val content: String) : ChatMessage()
@@ -34,7 +36,9 @@ sealed class ChatMessage {
 class ResumeChatViewModel(
     private val llmService: LLMService,
     private val resumeRepo: ResumeAnalysisRepository,
-    private val interviewRepo: InterviewRepository
+    private val interviewRepo: InterviewRepository,
+    private val unifiedAIService: UnifiedAICoachService,
+    private val userContextManager: UserContextManager
 ) : ViewModel() {
     private val logger = getLogger()
 
@@ -283,7 +287,7 @@ class ResumeChatViewModel(
         _chatMessages.value = emptyList()
         if (greeting) {
             _chatMessages.value = listOf(
-                ChatMessage.System("👋 Hi! Let's get you interview-ready."),
+                ChatMessage.System("����� Hi! Let's get you interview-ready."),
                 ChatMessage.System("What job role are you targeting?")
             )
         }
@@ -337,6 +341,7 @@ class ResumeChatViewModel(
         }
     }
 
+    // Enhanced resume analysis with unified context
     private fun analyzeAndShow() {
         val resume = _resumeText.value
         val role = _uiState.value.targetJobRole
@@ -345,50 +350,61 @@ class ResumeChatViewModel(
         val analysisId = generateUUID()
         viewModelScope.launch {
             try {
-                val result = llmService.analyzeResume(resume, role)
-                _analysis.value = result
-                _uiState.update {
-                    it.copy(isLoading = false, currentMode = InterviewMode.RESUME_ANALYSIS)
-                }
-                // update job match score
-                _uiState.update { it.copy(jobMatchScore = result.jobMatchScore) }
-                // Save analysis to DB
-                resumeRepo.saveResumeAnalysis(
-                    id = analysisId,
-                    userId = UserPreferences.getSafeUserId(),
+                // Use unified AI service with full context from challenges and interviews
+                val result = unifiedAIService.analyzeResume(
                     resumeText = resume,
-                    summary = result.summary,
-                    skillsParsed = result.skillsMatched.joinToString(","),
-                    skillsGaps = result.skillsMissing.joinToString(","),
-                    recommendations = result.recommendations,
-                    jobMatchScore = result.jobMatchScore,
-                    createdAt = Clock.System.now().toEpochMilliseconds()
+                    targetRole = role,
+                    includePersonalizedTips = true
                 )
-//                _chatMessages.update { list ->
-//                    list + listOf(
-//                        ChatMessage.System("📝 Resume analysis for '$role':"),
-//                        ChatMessage.System("🧠 ${result.summary}"),
-//                        ChatMessage.System("✅ Strengths: ${result.skillsMatched.joinToString()}"),
-//                        ChatMessage.System("⚠️ Weaknesses: ${result.skillsMissing.joinToString()}"),
-//                        ChatMessage.System("🏆 Role Fit Score: ${result.jobMatchScore}"),
-//                        ChatMessage.System("📚 Recommendations: ${result.recommendations}"),
-//                    )
-//                }
-            } catch (e: Exception) {
-                logger.d("Resume analysis failed: ${e.message}")
-                _chatMessages.update { it + ChatMessage.System("❌ Couldn’t analyze your resume. Try again.") }
+
+                result.fold(
+                    onSuccess = { analysis ->
+                        _analysis.value = analysis
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentMode = InterviewMode.RESUME_ANALYSIS,
+                                jobMatchScore = analysis.jobMatchScore
+                            )
+                        }
+
+                        // Save analysis to DB for future context
+                        resumeRepo.saveResumeAnalysis(
+                            id = analysisId,
+                            userId = UserPreferences.getSafeUserId(),
+                            resumeText = resume,
+                            summary = analysis.summary,
+                            skillsParsed = analysis.skillsMatched.joinToString(","),
+                            skillsGaps = analysis.skillsMissing.joinToString(","),
+                            recommendations = analysis.recommendations,
+                            jobMatchScore = analysis.jobMatchScore,
+                            createdAt = Clock.System.now().toEpochMilliseconds()
+                        )
+
+                        // Add contextual insights based on challenge performance
+                        addContextualResumeInsights()
+                    },
+                    onFailure = { error ->
+                        logger.e("Resume analysis failed", error)
+                        _chatMessages.update {
+                            it + ChatMessage.System("❌ Couldn't analyze your resume. Try again.")
+                        }
+                    }
+                )
             } finally {
                 setLoading(false)
             }
         }
     }
 
+    // Enhanced interview start with comprehensive context
     private fun startAdaptiveInterview() {
         logger.d("Start adaptive interview triggered")
         val targetRole = _uiState.value.targetJobRole
         val analysis = _analysis.value
         val summary = _analysis.value?.summary ?: ""
         val skills = _analysis.value?.skillsMatched ?: emptyList()
+
         when {
             targetRole.isBlank() -> {
                 logger.d("Adaptive interview failed: job role is blank")
@@ -406,14 +422,17 @@ class ResumeChatViewModel(
                 return
             }
         }
+
         val resumeAnalysisId = analysis?.id ?: run {
             logger.d("Adaptive interview failed: resume analysis not found")
             _uiState.update { it.copy(errorMessage = "Resume analysis not found") }
             return
         }
+
         val sessionId = generateUUID()
         currentSessionId = sessionId
         _uiState.update { it.copy(isLoading = true) }
+
         viewModelScope.launch {
             try {
                 logger.d("Creating interview session in DB")
@@ -423,29 +442,48 @@ class ResumeChatViewModel(
                     summary = summary,
                     sessionDate = Clock.System.now().toEpochMilliseconds()
                 )
-                val result = llmService.startInterviewSession(targetRole, summary, skills)
-                result.question?.let { q ->
-                    val questionId = generateUUID()
-                    interviewRepo.saveQuestion(
-                        id = questionId,
-                        questionText = q.question,
-                        topic = q.topic,
-                        difficulty = q.difficulty,
-                        followUp = q.followUp,
-                        lastAskedAt = Clock.System.now().toEpochMilliseconds(),
-                        timesAsked = 1
-                    )
-                    logger.d("First interview question saved and shown: ${q.question}")
-                    _chatMessages.update { it + ChatMessage.InterviewQuestionMsg(q.question, 0) }
-                    _currentQuestion.value = q
-                    _answerHistory.value = emptyList()
-                }?: run {
-                    logger.d("Failed to get interview question from LLM")
-                    _uiState.update { it.copy(errorMessage = "Failed to get interview question") }
-                }
-            } catch (e: Exception) {
-                logger.d("Interview start failed: ${e.message}")
-                _uiState.update { it.copy(errorMessage = "Interview start failed: ${e.message}") }
+
+                // Use unified AI service with comprehensive context including challenge history
+                val result = unifiedAIService.startInterviewSession(
+                    role = targetRole,
+                    resumeSummary = summary,
+                    skills = skills
+                )
+
+                result.fold(
+                    onSuccess = { interviewResult ->
+                        interviewResult.question?.let { q ->
+                            val questionId = generateUUID()
+                            viewModelScope.launch {
+                                interviewRepo.saveQuestion(
+                                    id = questionId,
+                                    questionText = q.question,
+                                    topic = q.topic,
+                                    difficulty = q.difficulty,
+                                    followUp = q.followUp,
+                                    lastAskedAt = Clock.System.now().toEpochMilliseconds(),
+                                    timesAsked = 1
+                                )
+                            }
+                            logger.d("First interview question saved and shown: ${q.question}")
+                            _chatMessages.update {
+                                it + ChatMessage.InterviewQuestionMsg(q.question, 0)
+                            }
+                            _currentQuestion.value = q
+                            _answerHistory.value = emptyList()
+
+                            // Add personalized interview intro based on context
+                            addPersonalizedInterviewIntro()
+                        } ?: run {
+                            logger.d("Failed to get interview question from unified service")
+                            _uiState.update { it.copy(errorMessage = "Failed to get interview question") }
+                        }
+                    },
+                    onFailure = { error ->
+                        logger.e("Interview start failed", error)
+                        _uiState.update { it.copy(errorMessage = "Interview start failed: ${error.message}") }
+                    }
+                )
             } finally {
                 setLoading(false)
                 isInitializingInterview = false
@@ -453,93 +491,220 @@ class ResumeChatViewModel(
         }
     }
 
+    // Enhanced answer submission with context-aware feedback
     private suspend fun submitInterviewAnswer(answer: String) {
         logger.d("Submit interview answer: $answer")
         val currentQ = _currentQuestion.value ?: return
-        val role =  _uiState.value.targetJobRole
-        val summary = _analysis.value?.summary ?: ""
-        val skills = _analysis.value?.skillsMatched ?: emptyList()
         val sessionId = currentSessionId ?: return
         val avgScore = calculateAverageScore(sessionId)
         _uiState.update { it.copy(lastInterviewScore = avgScore) }
         val updatedHistory = _answerHistory.value + (currentQ.question to answer)
         setLoading(true)
+
         viewModelScope.launch {
             try {
-                val ctx = InterviewSessionContext(role, summary, skills, updatedHistory)
-                val stepResult = llmService.submitInterviewAnswer(answer, currentQ, ctx)
-                logger.d("Interview answer submitted, feedback: ${stepResult.feedback}, score: ${stepResult.score}")
-                interviewRepo.saveUserAnswer(
-                    questionId = currentQ.id,
-                    sessionId = sessionId,
-                    answerText = answer,
-                    feedback = stepResult.feedback,
-                    score = stepResult.score,
-                    topic = currentQ.topic,
-                    timestamp = Clock.System.now().toEpochMilliseconds()
+                // Create session context for the unified AI service
+                val sessionContext = InterviewSessionContext(
+                    jobRole = _uiState.value.targetJobRole,
+                    resumeSummary = _analysis.value?.summary ?: "",
+                    skills = _analysis.value?.skillsMatched ?: emptyList(),
+                    answerHistory = updatedHistory
                 )
-                if (stepResult.feedback != null) {
-                    interviewRepo.updateUserAnswerFeedback(
-                        questionId = currentQ.id,
-                        sessionId = sessionId,
-                        feedback = stepResult.feedback
-                    )
-                }
-                if (stepResult.question != null) {
-                    interviewRepo.saveQuestion(
-                        id = stepResult.question.id,
-                        questionText = stepResult.question.question,
-                        topic = stepResult.question.topic,
-                        difficulty = stepResult.question.difficulty,
-                        followUp = stepResult.question.followUp,
-                        lastAskedAt = Clock.System.now().toEpochMilliseconds(),
-                        timesAsked = 1
-                    )
-                }
-                _chatMessages.update {
-                    it + ChatMessage.User(answer) +
-                            listOfNotNull(stepResult.feedback?.let { f -> ChatMessage.Followup(f) }) +
-                            listOfNotNull(stepResult.question?.let { q -> ChatMessage.InterviewQuestionMsg(q.question, updatedHistory.size) })
-                }
-                _answerHistory.value = updatedHistory
-                _currentQuestion.value = stepResult.question
-                if (stepResult.done) {
-                    logger.d("Interview complete!")
-                    _chatMessages.update { it + ChatMessage.System("✅ Interview complete!") }
-                    _uiState.update { it.copy(hasCompletedInterview = true) }
-                    currentSessionId = null
-                }
+
+                // Use unified AI service with comprehensive context for better feedback
+                val result = unifiedAIService.submitInterviewAnswer(
+                    answer = answer,
+                    previousQuestion = currentQ,
+                    sessionContext = sessionContext
+                )
+
+                result.fold(
+                    onSuccess = { stepResult ->
+                        logger.d("Interview answer submitted, feedback: ${stepResult.feedback}")
+
+                        // Save to database for context building
+                        interviewRepo.saveUserAnswer(
+                            questionId = currentQ.id,
+                            sessionId = sessionId,
+                            answerText = answer,
+                            feedback = stepResult.feedback,
+                            score = stepResult.score ?: 0,
+                            topic = currentQ.topic,
+                            timestamp = Clock.System.now().toEpochMilliseconds()
+                        )
+
+                        if (stepResult.feedback != null) {
+                            interviewRepo.updateUserAnswerFeedback(
+                                questionId = currentQ.id,
+                                sessionId = sessionId,
+                                feedback = stepResult.feedback
+                            )
+                        }
+
+                        if (stepResult.question != null) {
+                            viewModelScope.launch {
+                                interviewRepo.saveQuestion(
+                                    id = stepResult.question.id,
+                                    questionText = stepResult.question.question,
+                                    topic = stepResult.question.topic,
+                                    difficulty = stepResult.question.difficulty,
+                                    followUp = stepResult.question.followUp,
+                                    lastAskedAt = Clock.System.now().toEpochMilliseconds(),
+                                    timesAsked = 1
+                                )
+                            }
+                        }
+
+                        // Update chat messages with enhanced feedback
+                        val newMessages = mutableListOf<ChatMessage>().apply {
+                            add(ChatMessage.User(answer))
+                            stepResult.feedback?.let { feedback ->
+                                add(ChatMessage.Followup(feedback))
+                            }
+                            stepResult.question?.let { question ->
+                                add(ChatMessage.InterviewQuestionMsg(question.question, updatedHistory.size))
+                            }
+                        }
+
+                        _chatMessages.update { it + newMessages }
+                        _answerHistory.value = updatedHistory
+                        _currentQuestion.value = stepResult.question
+
+                        if (stepResult.question == null || stepResult.done) {
+                            logger.d("Interview complete!")
+
+                            // Generate personalized completion message with context
+                            val completionMessage = generateInterviewCompletionMessage()
+                            _chatMessages.update { it + ChatMessage.System(completionMessage) }
+                            _uiState.update { it.copy(hasCompletedInterview = true) }
+                            currentSessionId = null
+                        }
+                    },
+                    onFailure = { error ->
+                        logger.e("Failed to submit answer", error)
+                        _chatMessages.update {
+                            it + ChatMessage.System("❌ Sorry, I couldn't process your answer. Please try again.")
+                        }
+                    }
+                )
             } finally {
                 setLoading(false)
             }
         }
     }
-    fun clearSessionAnswers() {
-        logger.d("Clear session answers triggered")
-        _sessionAnswers.value = emptyList()
-    }
-    suspend fun getNextAdaptiveQuestion(userId: String): InterviewQuestion? {
-        val answerHistory = interviewRepo.getAnswersForUser(userId)
-        val weakTopic = answerHistory
-            .groupBy { it.topic }
-            .maxByOrNull { (_, answers) ->
-                answers.count { ans ->
-                    ans.score == null || ans.score < 60 || (ans.feedback ?: "").contains("incorrect", ignoreCase = true)
-                }
-            }?.key
 
-        // All domain models here
-        val allQuestions = interviewRepo.getAllQuestions()
-        val askedQuestionIds = answerHistory.map { it.questionId }.toSet()
-        return allQuestions
-            .filter { it.id !in askedQuestionIds }
-            .firstOrNull { weakTopic == null || it.topic == weakTopic }
+    // New helper methods for context-aware features
+    private suspend fun addContextualResumeInsights() {
+        try {
+            val challengeProgress = userContextManager.getChallengeProgress()
+            val interviewHistory = userContextManager.getInterviewHistory()
+
+            val insights = mutableListOf<String>()
+
+            // Add challenge-based insights
+            if (challengeProgress.topicMastery.isNotEmpty()) {
+                val verifiedSkills = challengeProgress.topicMastery.entries
+                    .filter { it.value > 0.7 }
+                    .map { it.key }
+                if (verifiedSkills.isNotEmpty()) {
+                    insights.add("✅ Verified skills from challenges: ${verifiedSkills.joinToString()}")
+                }
+            }
+
+            // Add interview-based insights
+            if (interviewHistory.strongTopics.isNotEmpty()) {
+                insights.add("🎯 Strong interview topics: ${interviewHistory.strongTopics.take(3).joinToString()}")
+            }
+
+            if (insights.isNotEmpty()) {
+                _chatMessages.update { it + ChatMessage.System("📊 Additional insights:\n${insights.joinToString("\n")}") }
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to add contextual insights", e)
+        }
     }
+
+    private suspend fun addPersonalizedInterviewIntro() {
+        try {
+            val challengeProgress = userContextManager.getChallengeProgress()
+            val conversationMemory = userContextManager.getConversationMemory()
+
+            val intro = buildString {
+                append("🚀 Let's begin! ")
+
+                if (challengeProgress.totalCompleted > 0) {
+                    append("I've reviewed your ${challengeProgress.totalCompleted} completed challenges. ")
+                }
+
+                if (conversationMemory.commonTopics.isNotEmpty()) {
+                    append("Based on our previous conversations about ${conversationMemory.commonTopics.take(2).joinToString()}, ")
+                }
+
+                append("I'll tailor this interview to your experience level. Good luck!")
+            }
+
+            _chatMessages.update { it + ChatMessage.System(intro) }
+        } catch (e: Exception) {
+            logger.e("Failed to add personalized intro", e)
+        }
+    }
+
+    // Missing method referenced from UI
+    fun clearSessionAnswers() {
+        viewModelScope.launch {
+            try {
+                _sessionAnswers.value = emptyList()
+                _answerHistory.value = emptyList()
+                logger.d("Session answers cleared")
+            } catch (e: Exception) {
+                logger.e("Failed to clear session answers", e)
+            }
+        }
+    }
+
+    // Fix for calculateAverageScore method that was causing compilation error
     private suspend fun calculateAverageScore(sessionId: String): Int {
-        val answers = interviewRepo.getAnswersForSession(sessionId)
-        val scores = answers.mapNotNull { it.score }
-        return if (scores.isNotEmpty()) scores.average().toInt() else 0
+        return try {
+            val answers = interviewRepo.getAnswersForSession(sessionId)
+            if (answers.isEmpty()) return 0
+
+            val scores = answers.mapNotNull { it.score }
+            if (scores.isNotEmpty()) scores.average().toInt() else 0
+        } catch (e: Exception) {
+            logger.e("Failed to calculate average score", e)
+            0
+        }
     }
+
+    // Add missing generateInterviewCompletionMessage method
+    private suspend fun generateInterviewCompletionMessage(): String {
+        return try {
+            val userProfile = userContextManager.getUserProfile()
+            val challengeProgress = userContextManager.getChallengeProgress()
+
+            buildString {
+                append("🎉 Interview complete! ")
+
+                if (challengeProgress.totalCompleted > 10) {
+                    append("Your ${challengeProgress.totalCompleted} completed challenges show strong technical foundation. ")
+                }
+
+                append("Based on your performance, I recommend focusing on ")
+
+                val weakAreas = userProfile.skillAssessment.skillGaps.take(2)
+                if (weakAreas.isNotEmpty()) {
+                    append("${weakAreas.joinToString(" and ")} ")
+                }
+
+                append("for your next interview. Great job today! 🚀")
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to generate completion message", e)
+            "🎉 Interview complete! Great job today! Keep practicing and you'll continue to improve. 🚀"
+        }
+    }
+
+    // ...existing code...
 }
 private fun ChatMessage.toChatUIMessage(): ChatUIMessage {
     return when (this) {

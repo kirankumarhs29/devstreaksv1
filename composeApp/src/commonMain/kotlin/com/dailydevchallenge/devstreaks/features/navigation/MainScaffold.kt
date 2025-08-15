@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import androidx.navigation.toRoute
 import com.dailydevchallenge.devstreaks.data.ChallengeDetail
+import com.dailydevchallenge.devstreaks.features.ai.AICoachHub
 import com.dailydevchallenge.devstreaks.features.routes.LearnRoute
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile
 import com.dailydevchallenge.devstreaks.features.routes.PathDetail
@@ -41,9 +42,13 @@ import com.dailydevchallenge.devstreaks.features.devcoach.ResumeChatViewModel
 import com.dailydevchallenge.devstreaks.features.feed.ProgressWithLeaderboardScreen
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
 import com.dailydevchallenge.devstreaks.features.onboarding.LearningIntentScreen
+import com.dailydevchallenge.devstreaks.features.onboarding.IntegratedOnboardingScreen
 import com.dailydevchallenge.devstreaks.features.onboarding.OnboardingViewModel
 import com.dailydevchallenge.devstreaks.features.pomodoro.PomodoroScreen
 import com.dailydevchallenge.devstreaks.features.profile.EditProfileScreen
+import com.dailydevchallenge.devstreaks.features.leaderboard.LeaderboardScreen
+import com.dailydevchallenge.devstreaks.features.profile.ActivityFeedScreen
+import com.dailydevchallenge.devstreaks.features.subscription.SubscriptionScreen
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ProfileViewModel
 import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
@@ -118,32 +123,15 @@ fun MainScaffold(
                     ProgressWithLeaderboardScreen(navController,viewModel = homeViewModel)
                 }
                 composable(Routes.Profile) {
-                    ProfileScreen(onLogout = onLogout)
+                    ProfileScreen(onLogout = onLogout, navController = navController)
                 }
 
 
 
                 composable(Routes.LearningIntent) {
-                    LearningIntentScreen(
-                        viewModel = onboardingViewModel,
+                    IntegratedOnboardingScreen(
                         navController = navController,
-                        resumeChatViewModel = koinInject(),
-                        onFinish = { goal, skills, experience, time, days, style, fear ->
-                            coroutineScope.launch {
-                                logger.log("Learning Intent submitted: $goal, $skills, $experience, $time, $days, $style, $fear")
-                                onboardingViewModel.submitIntent(
-                                    LearningProfile(
-                                        goal = goal,
-                                        skills = skills,
-                                        experience = experience,
-                                        timePerDay = time,
-                                        days = days,
-                                        style = style,
-                                        fear = fear
-                                    )
-                                )
-                            }
-                        }
+                        viewModel = onboardingViewModel
                     )
                 }
 
@@ -200,6 +188,16 @@ fun MainScaffold(
                 composable(Routes.clearDevChat) {
                     ConversationHistoryScreen(onBack = { navController.popBackStack() })
                 }
+
+                // New Firebase-powered features
+                composable(Routes.Leaderboard) {
+                    LeaderboardScreen()
+                }
+
+                composable(Routes.Subscription) {
+                    SubscriptionScreen(navController)
+                }
+
                 composable(Routes.editProfile) {
                     EditProfileScreen(
                         viewModel = profileViewModel,
@@ -227,10 +225,8 @@ fun MainScaffold(
                             day = challenge,
                             isCompleted = isCompleted,
                             onMarkAsDone = {
-                                coroutineScope.launch {
-                                    homeViewModel.markTaskCompleted(challenge.id, challenge.xp)
-                                    shouldNavigateToHome = true
-                                }
+                                // Remove duplicate completion call - ViewModel handles this now
+                                shouldNavigateToHome = true
                             },
                             navController = navController
                         )
@@ -269,8 +265,12 @@ fun MainScaffold(
                 composable(Routes.InterviewHome) {
                     InterviewHomeScreen()
                 }
-
-
+                composable(Routes.AIHub) {
+                    AICoachHub(navController) { navController.popBackStack() }
+                }
+                composable(Routes.ActivityFeed) {
+                    ActivityFeedScreen(navController)
+                }
             }
         }
     }

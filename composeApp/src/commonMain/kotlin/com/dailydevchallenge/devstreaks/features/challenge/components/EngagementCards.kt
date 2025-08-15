@@ -7,12 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.dailydevchallenge.devstreaks.theme.extendedColors
 
 @Composable
 fun CoachDialogueCard(level: Int, logicScore: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFEBF4FF)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.infoContainer),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -27,7 +28,7 @@ fun CoachDialogueCard(level: Int, logicScore: Int) {
 fun ChallengeStoryMissionCard(title: String, emoji: String, narrative: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFFAF5)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.successContainer),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

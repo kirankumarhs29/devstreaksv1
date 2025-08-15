@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.dailydevchallenge.devstreaks.features.ProgressScreen
 import com.dailydevchallenge.devstreaks.features.home.HomeViewModel
+import com.dailydevchallenge.devstreaks.features.leaderboard.LeaderboardScreen
 import org.koin.compose.koinInject
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 

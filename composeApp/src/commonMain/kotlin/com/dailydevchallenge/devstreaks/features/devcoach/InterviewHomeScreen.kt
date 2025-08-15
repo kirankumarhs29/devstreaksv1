@@ -23,6 +23,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
+import com.dailydevchallenge.devstreaks.theme.extendedColors
 
 @Composable
 fun InterviewHomeScreen(
@@ -159,7 +160,7 @@ fun InterviewReadinessDashboard() {
 fun AIScoreBox(score: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFDEF3FF))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.infoContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("AI Readiness Score", fontWeight = FontWeight.Medium)
@@ -203,7 +204,7 @@ fun WeeklyTrendGraph() {
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.extendedColors.successContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("📈 Weekly Progress")
@@ -213,4 +214,3 @@ fun WeeklyTrendGraph() {
         }
     }
 }
-

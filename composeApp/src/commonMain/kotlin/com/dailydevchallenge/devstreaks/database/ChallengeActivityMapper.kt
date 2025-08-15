@@ -25,6 +25,11 @@ fun Map<String, String>.toPreferenceString(): String =
     this.entries.joinToString(";") { "${it.key}=${it.value}" }
 
 fun parsePreferences(prefString: String?): Map<String, String> =
-    prefString?.split(";")?.associate {
-        val (k, v) = it.split("="); k to v
-    } ?: emptyMap()
+    prefString?.split(";")?.mapNotNull { pair ->
+        val parts = pair.split("=", limit = 2)
+        if (parts.size == 2) {
+            parts[0] to parts[1]
+        } else {
+            null // Skip malformed entries
+        }
+    }?.toMap() ?: emptyMap()

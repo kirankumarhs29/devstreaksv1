@@ -7,7 +7,6 @@ import com.dailydevchallenge.devstreaks.repository.InterviewRepository
 import org.koin.dsl.module
 import com.dailydevchallenge.devstreaks.repository.JournalRepositoryImpl
 import com.dailydevchallenge.devstreaks.repository.LeaderboardRepository
-import com.dailydevchallenge.devstreaks.repository.LeaderboardRepositoryImpl
 import com.dailydevchallenge.devstreaks.repository.MemoryRepository
 import com.dailydevchallenge.devstreaks.repository.MemoryRepositoryImpl
 import com.dailydevchallenge.devstreaks.repository.ProfileRepository
@@ -17,6 +16,10 @@ import com.dailydevchallenge.devstreaks.repository.UserInfoRepository
 import com.dailydevchallenge.devstreaks.repository.UserInfoRepositoryImpl
 import com.dailydevchallenge.devstreaks.sync.FirebaseUserHelper
 import com.dailydevchallenge.devstreaks.sync.getPlatformFirebaseUserHelper
+import com.dailydevchallenge.devstreaks.repository.UserProgressRepositoryImpl
+import com.dailydevchallenge.devstreaks.features.home.UserStatsManager
+import com.dailydevchallenge.devstreaks.features.subscription.SubscriptionRepository
+import com.dailydevchallenge.devstreaks.features.subscription.FirebaseSubscriptionRepository
 
 
 val repositoryModule = module {
@@ -27,8 +30,12 @@ val repositoryModule = module {
     single<ResumeAnalysisRepository> { ResumeAnalysisRepository(get())}
     single<InterviewRepository> { InterviewRepository(get())}
     single<FirebaseUserHelper> { getPlatformFirebaseUserHelper() }
-    single { LeaderboardRepositoryImpl(get()) as LeaderboardRepository }
+
+    // Use the platform-specific Firebase helper
+    single { LeaderboardRepository(get<FirebaseUserHelper>()) }
+    single<SubscriptionRepository> { FirebaseSubscriptionRepository() }
+
     single { UserInfoRepositoryImpl(get()) as UserInfoRepository }
-
+    single<UserProgressRepositoryImpl> { UserProgressRepositoryImpl() }
+    single<UserStatsManager> { UserStatsManager(get()) }
 }
-

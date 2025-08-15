@@ -127,7 +127,7 @@ class ChallengeRepository(
         pathQueries.selectAllPaths().executeAsList().lastOrNull()?.id
     }
 
-    suspend fun markTaskCompleted(taskId: String, xp: Int ,userId: String) = withContext(Dispatchers.Default) {
+    suspend fun markTaskCompleted(taskId: String, xp: Int, userId: String) = withContext(Dispatchers.Default) {
         val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
 
         userProfileQueries.insertUserProgress(
@@ -138,28 +138,31 @@ class ChallengeRepository(
         )
         PlatformSync.uploadUserProgress(
             UserProgress(
-                id = generateUUID(), // same id used above
+                id = generateUUID(),
                 userId = userId,
                 completedTaskId = taskId,
                 completedDate = today
             )
         )
-        // Update user stats
 
+        // Get current stats from local DB
         val currentStats = pathQueries.selectUserStats().executeAsOneOrNull()
         val yesterday = LocalDate.parse(today).minus(1, DateTimeUnit.DAY).toString()
-        val isStreak = currentStats?.lastCompletedDate == yesterday
+        val isStreak = currentStats?.lastCompletedDate == yesterday || currentStats?.lastCompletedDate == today
 
         val newXp = (currentStats?.xp ?: 0) + xp
         val newStreak = if (isStreak) (currentStats?.streak ?: 0) + 1 else 1
 
-        firebaseUserHelper.updateUserProgress(userId, newXp, streak = currentStats?.streak)
+        // Update both Firebase and local DB
+        firebaseUserHelper.updateUserProgress(userId, newXp.toLong(), newStreak.toLong())
         pathQueries.insertOrReplaceUserStats(
             id = "user_stats",
             xp = newXp.toLong(),
             streak = newStreak.toLong(),
             lastCompletedDate = today
         )
+
+        Logger().d("ChallengeRepository", "Task completed: XP updated from ${currentStats?.xp ?: 0} to $newXp, Streak: $newStreak")
     }
     suspend fun getXPAndStreak(): Pair<Int, Int> = withContext(Dispatchers.Default) {
         val stats = pathQueries.selectUserStats().executeAsOneOrNull()
@@ -167,7 +170,7 @@ class ChallengeRepository(
     }
 
     suspend fun isTaskCompleted(taskId: String, userId: String): Boolean = withContext(Dispatchers.Default) {
-        userProfileQueries.selectUserProgressByTask(taskId, userId).executeAsOneOrNull() != null
+        userProfileQueries.selectUserProgressByTask(taskId, userId).executeAsList().isNotEmpty()
     }
 
     suspend fun getUserStats(): UserStats {
@@ -291,14 +294,37 @@ class ChallengeRepository(
     }
 
     suspend fun updateUser(user: User) = withContext(Dispatchers.Default) {
+        // Update local database
         userProfileQueries.updateUser(
-            user.email, user.passwordHash, user.username,
-            user.avatarUrl, user.lastLogin, user.xp.toLong(),
-            user.level ?: 1, user.dailyStreak ?: 0,
-            user.streakStartDate?.toEpochMilliseconds(),
-            user.preferences.toPreferenceString(), user.role,
-            user.badges.joinToString("|"), userId = user.userId
+            email = user.email,
+            passwordHash = user.passwordHash,
+            username = user.username,
+            avatarUrl = user.avatarUrl,
+            lastLogin = user.lastLogin,
+            xp = user.xp.toLong(),
+            level = user.level ?: 1,
+            dailyStreak = user.dailyStreak ?: 0,
+            streakStartDate = user.streakStartDate?.toEpochMilliseconds(),
+            role = user.role,
+            badges = user.badges.joinToString("|"),
+            preferences = user.preferences.toPreferenceString(),
+            userId = user.userId
         )
+        println("ChallengeRepository: Updated user ${user.userId} with avatarUrl: ${user.avatarUrl}")
+
+        // Sync with Firebase
+        try {
+            firebaseUserHelper.updateUserInFirestore(user)
+            getLogger().d("ChallengeRepository", "User ${user.userId} successfully synced to Firebase")
+        } catch (e: Exception) {
+            getLogger().e("ChallengeRepository", e, "Failed to sync user ${user.userId} to Firebase: ${e.message}")
+            // Don't throw the exception to prevent local update rollback
+        }
+
+        // Let's verify the update worked by reading it back
+        val updatedUser = userProfileQueries.getUserById(user.userId).executeAsOneOrNull()
+        println("ChallengeRepository: Verification - User after update: $updatedUser")
+        println("ChallengeRepository: Verification - avatarUrl in DB: ${updatedUser?.avatarUrl}")
     }
 
 }

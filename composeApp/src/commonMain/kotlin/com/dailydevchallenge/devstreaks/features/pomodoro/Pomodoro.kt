@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dailydevchallenge.devstreaks.theme.extendedColors
 import kotlinx.coroutines.delay
 import com.dailydevchallenge.devstreaks.tts.TTSHelper
 import com.mohamedrejeb.calf.core.LocalPlatformContext
@@ -77,7 +78,7 @@ fun PomodoroScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Gray)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -97,7 +98,7 @@ fun PomodoroScreen(
         ) {
             CircularProgressBar(
                 percentage = (timeLeft.toFloat() / totalTime.toFloat()),
-                color = if (isFocusMode) Color(0xFF00BCD4) else Color(0xFF4CAF50),
+                color = if (isFocusMode) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.success,
                 strokeWidth = 12f
             )
             val minutes = (timeLeft / 60).toInt()
@@ -122,7 +123,7 @@ fun PomodoroScreen(
                         timeLeft = duration * 60L
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedDuration == duration) Color(0xFF2ECC71) else Color.DarkGray
+                        containerColor = if (selectedDuration == duration) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Text("${duration}m")
@@ -145,8 +146,8 @@ fun PomodoroScreen(
                     }
                 }
             },
-            label = { Text("Custom duration (min)", color = Color.White) },
-            textStyle = LocalTextStyle.current.copy(color = Color.White),
+            label = { Text("Custom duration (min)", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,

@@ -4,10 +4,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.dailydevchallenge.devstreaks.features.challenge.components.CompletionCard
+import com.dailydevchallenge.devstreaks.features.home.UserStatsManager
+import com.dailydevchallenge.devstreaks.llm.AIFeedbackService
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
+import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
+import org.koin.compose.koinInject
 
 
 @Composable
@@ -17,8 +22,18 @@ fun ChallengeFlowScreen(
     isCompleted: Boolean = false,
     onMarkAsDone: () -> Unit
 ) {
-    val viewModel: ChallengeDetailViewModel = remember { ChallengeDetailViewModel(task, isCompleted) }
+    val repository: ChallengeRepository = koinInject()
+    val userStatsManager: UserStatsManager = koinInject()
+    val aiFeedbackService: AIFeedbackService = koinInject()
+    val viewModel: ChallengeDetailViewModel = remember {
+        ChallengeDetailViewModel(repository, userStatsManager, aiFeedbackService)
+    }
     val uiState by viewModel.uiState.collectAsState()
+
+    // Load the task when the screen is first displayed
+    LaunchedEffect(task.id) {
+        viewModel.loadTask(task.id)
+    }
 
     when (uiState.step) {
         ChallengeStep.LEARN -> ChallengeLearnScreen(

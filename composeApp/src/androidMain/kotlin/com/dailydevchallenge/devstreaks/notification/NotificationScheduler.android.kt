@@ -1,13 +1,23 @@
 package com.dailydevchallenge.devstreaks.notification
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.work.*
+import com.dailydevchallenge.devstreaks.network.getHttpClient
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.contentType
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
 
 
 actual fun getNotificationScheduler(): NotificationScheduler {
@@ -68,7 +78,7 @@ class AndroidNotificationScheduler(private val context: Context) : NotificationS
 
 class AndroidPushMessageHandler : PushMessageHandler {
     override fun onPushReceived(title: String, message: String, data: Map<String, String>) {
-       // Log.d("PushMessageHandler", "Received push: $title - $message with data: $data")
+        Log.d("PushMessageHandler", "Received push: $title - $message with data: $data")
 
         // You can route this to NotificationScheduler
         val scheduler = getNotificationScheduler()
@@ -78,14 +88,77 @@ class AndroidPushMessageHandler : PushMessageHandler {
 }
 
 class MyFirebaseService : FirebaseMessagingService() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // 🔐 You MUST send this token to your backend or save it locally
-        // Log.d("FCM", "Refreshed token: $token")
+        Log.d("FCM", "Refreshed token: $token")
 
-        // Optionally: Store in SharedPreferences or your local database
-        // Or sync to your server for targeted messaging
+        // Store token locally for immediate access
+        storeTokenLocally(token)
+
+        // Send token to your backend server
+        sendTokenToServer(token)
     }
+
+    private fun storeTokenLocally(token: String) {
+        try {
+            val sharedPrefs = getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
+            sharedPrefs.edit { putString("fcm_token", token) }
+            Log.d("FCM", "Token stored locally successfully")
+        } catch (e: Exception) {
+            Log.e("FCM", "Failed to store token locally", e)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun sendTokenToServer(token: String) {
+        try {
+            // You can implement this using your existing HTTP client
+            // For now, we'll use a coroutine to handle the async call
+            kotlinx.coroutines.GlobalScope.launch {
+                try {
+                    // Replace with your actual backend endpoint
+                    sendTokenToBackend(token)
+                } catch (e: Exception) {
+                    Log.e("FCM", "Failed to send token to backend", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("FCM", "Error in token update process", e)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private suspend fun sendTokenToBackend(token: String) {
+        try {
+            val userId = UserPreferences.getSafeUserId()
+
+            val client = getHttpClient()
+
+            client.post("https://your-backend.com/api/fcm/token") {
+                contentType(io.ktor.http.ContentType.Application.Json)
+                setBody(mapOf(
+                    "userId" to userId,
+                    "fcmToken" to token,
+                    "platform" to "android"
+                ))
+            }
+
+            Log.d("FCM", "Token successfully sent to backend")
+        } catch (e: Exception) {
+            Log.e("FCM", "Failed to send token to backend: ${e.message}", e)
+            // You might want to store this for retry later
+            storeFailedTokenUpdate(token)
+        }
+    }
+
+    private fun storeFailedTokenUpdate(token: String) {
+        // Store failed token updates for retry later
+        val sharedPrefs = getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit { putString("pending_token_update", token) }
+    }
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         val title = remoteMessage.notification?.title ?: "New Notification"
         val body = remoteMessage.notification?.body ?: ""

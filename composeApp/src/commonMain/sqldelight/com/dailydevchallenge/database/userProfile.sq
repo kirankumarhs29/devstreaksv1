@@ -33,6 +33,7 @@ CREATE TABLE UserProgress (
     userId TEXT NOT NULL,
     completedTaskId TEXT,
     completedDate TEXT,
+    UNIQUE(userId, completedTaskId),
     FOREIGN KEY (userId) REFERENCES Users(userId)
 );
 CREATE TABLE DailyContent (

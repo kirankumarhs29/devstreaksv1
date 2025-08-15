@@ -1,6 +1,9 @@
 package com.dailydevchallenge.devstreaks.llm
 
+import com.dailydevchallenge.devstreaks.model.ActivityType
+import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
+import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.model.RemoteResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
@@ -89,11 +92,24 @@ class GeminiLLMService(
 
         val body = response.bodyAsText()
         logger.d("Gemini response:\n$body")
+
+        // Check if the response contains an error
         return try {
+            val jsonResponse = Json.parseToJsonElement(body).jsonObject
+
+            // Check for error in response
+            if (jsonResponse.containsKey("error")) {
+                val errorMessage = jsonResponse["error"]?.jsonPrimitive?.content ?: "Unknown error"
+                logger.e("Gemini API returned error: $errorMessage")
+                throw Exception("Gemini API error: $errorMessage")
+            }
+
+            // Parse as ChallengePathResponse if no error
             jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), body)
         } catch (e: Exception) {
             logger.e("Failed to parse Gemini plan response", e)
-            throw e
+            // Return a fallback response instead of throwing
+            createFallbackChallengeResponse(goal, skills, days, requestId)
         }
     }
 
@@ -147,13 +163,42 @@ class GeminiLLMService(
         }
 
         val body = response.bodyAsText()
-        logger.d("OpenAI response:\n$body")
+        logger.d("OpenAI response length: ${body.length} characters")
+        logger.d("OpenAI response preview:\n${body.take(500)}...")
+
+        // Check if response appears to be truncated
+        if (!body.trim().endsWith("}") && !body.trim().endsWith("]")) {
+            logger.e("Response appears to be truncated. Last 100 chars: ${body.takeLast(100)}")
+            throw Exception("Incomplete response received from AI service")
+        }
 
         return try {
+            // First, try to parse as a direct ChallengePathResponse
             jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), body)
-        } catch (e: Exception) {
-            logger.e("Failed to parse OpenAI plan response", e)
-            throw e
+        } catch (directParseException: Exception) {
+            // If that fails, check if it's an error wrapper with rawResponse
+            try {
+                val jsonElement = Json.parseToJsonElement(body)
+                if (jsonElement.jsonObject.containsKey("error") && jsonElement.jsonObject.containsKey("rawResponse")) {
+                    logger.d("Detected error wrapper, extracting rawResponse")
+                    val rawResponse = jsonElement.jsonObject["rawResponse"]?.jsonPrimitive?.content
+                    if (rawResponse != null) {
+                        logger.d("Attempting to parse extracted rawResponse")
+                        jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), rawResponse)
+                    } else {
+                        throw Exception("rawResponse field is null")
+                    }
+                } else {
+                    // Re-throw the original exception if it's not an error wrapper
+                    throw directParseException
+                }
+            } catch (e: Exception) {
+                logger.e("Failed to parse OpenAI plan response", e)
+                logger.e("Original parse error: ${directParseException.message}")
+                logger.e("Response body (first 1000 chars): ${body.take(1000)}")
+                logger.e("Response body (last 200 chars): ${body.takeLast(200)}")
+                throw Exception("Failed to parse AI response: ${e.message}")
+            }
         }
     }
 
@@ -398,4 +443,56 @@ class GeminiLLMService(
         }
     }
 
+    // Fallback method to create a basic challenge response when API fails
+    private fun createFallbackChallengeResponse(
+        goal: String,
+        skills: List<String>,
+        days: Int,
+        requestId: String
+    ): ChallengePathResponse {
+        val fallbackTasks = (1..minOf(days, 7)).map { dayNumber ->
+            ChallengeTask(
+                id = "fallback-day-$dayNumber",
+                pathId = requestId,
+                day = dayNumber,
+                title = "Day $dayNumber: $goal Fundamentals",
+                type = goal,
+                content = "Learn the basics of $goal on day $dayNumber. This is a fallback lesson while we work on getting the full AI-generated content.",
+                xp = 50,
+                checklist = listOf(
+                    "Complete the reading material",
+                    "Try the practice exercises",
+                    "Review key concepts"
+                ),
+                whyItMatters = "Building strong fundamentals in $goal is essential for your learning journey.",
+                tip = "Take your time and practice regularly for best results!",
+                challenges = listOf(
+                    ChallengeActivity(
+                        id = "fallback-quiz-$dayNumber",
+                        type = ActivityType.QUIZ,
+                        prompt = "Test your understanding of $goal basics from day $dayNumber",
+                        options = listOf(
+                            "Option A: Basic concept",
+                            "Option B: Intermediate concept",
+                            "Option C: Advanced concept",
+                            "Option D: Expert concept"
+                        ),
+                        correctAnswer = "Option A: Basic concept",
+                        explanation = "This covers the fundamental concepts you need to master."
+                    ),
+                    ChallengeActivity(
+                        id = "fallback-flashcard-$dayNumber",
+                        type = ActivityType.FLASHCARD,
+                        prompt = "Review key $goal terms and definitions",
+                        explanation = "Flashcards help reinforce important concepts through spaced repetition."
+                    )
+                )
+            )
+        }
+
+        return ChallengePathResponse(
+            track = "Basic $goal Learning Path (Fallback)",
+            days = fallbackTasks
+        )
+    }
 }

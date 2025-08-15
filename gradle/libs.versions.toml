@@ -103,6 +103,9 @@ firebaseMessagingKtx = "24.1.2"
 firebaseCrashlyticsKtx = "19.4.4"
 annotationJvm = "1.9.1"
 runtimeJvmstubs = "1.8.3"
+uiGraphicsDesktop = "1.7.0"
+kamel = "0.9.5"
+androidxFoundationAndroid = "1.9.0"
 
 
 [libraries]
@@ -121,6 +124,8 @@ androidx-material3 = { module = "androidx.compose.material3:material3", version.
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 calf-file-picker = { module = "com.mohamedrejeb.calf:calf-file-picker", version.ref = "calfFilePicker" }
+calf-ui = { module = "com.mohamedrejeb.calf:calf-ui", version.ref = "calfFilePicker" }
+calf-webview = { module = "com.mohamedrejeb.calf:calf-webview", version.ref = "calfFilePicker" }
 com-google-firebase-firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 compose-navigation = { module = "io.github.xxfast:compose-navigation", version.ref = "composeNavigation" }
 compottie = { module = "dev.romainguy.compottie:compottie", version.ref = "compottie" }
@@ -140,7 +145,6 @@ foundation-layout = { module = "org.jetbrains.compose.foundation:foundation-layo
 google-firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx" }
 google-firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 google-firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
-kamel-image = { module = "com.alialbaali.kamel:kamel-image", version.ref = "kamelImage" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -227,6 +231,10 @@ firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messa
 google-firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
 androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
 androidx-runtime-jvmstubs = { group = "androidx.compose.runtime", name = "runtime-jvmstubs", version.ref = "runtimeJvmstubs" }
+androidx-ui-graphics-desktop = { group = "androidx.compose.ui", name = "ui-graphics-desktop", version.ref = "uiGraphicsDesktop" }
+firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx" }
+kamel-image = { module = "media.kamel:kamel-image", version.ref = "kamel" }
+androidx-compose-foundation-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "androidxFoundationAndroid" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

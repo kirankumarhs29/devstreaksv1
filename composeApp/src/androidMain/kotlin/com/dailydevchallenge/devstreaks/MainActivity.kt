@@ -43,6 +43,18 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
         }
     }
+
+    // Register the microphone permission launcher
+    private val microphonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(this, "Microphone permission granted", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Microphone permission denied. Speech-to-text features won't work.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     // Function to request notification permission
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -61,37 +73,48 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    // function to grant sound and microphone permissions
-    private fun requestSoundAndMicrophonePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.RECORD_AUDIO
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Permission is already granted
-                    Toast.makeText(this, "Microphone permission already granted", Toast.LENGTH_SHORT).show()
-                }
-                else -> {
-                    // Request the permission
-                    ActivityCompat.requestPermissions(
-                        this,
-                        arrayOf(Manifest.permission.RECORD_AUDIO),
-                        101
-                    )
-                }
-            }
-        }
-    }
-    // to check if the microphone permission is granted
-    private fun isMicrophonePermissionGranted(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    // Function to request microphone permission (modern approach)
+    private fun requestMicrophonePermission() {
+        when {
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true // Microphone permission is not required for API < 31
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission is already granted
+                return
+            }
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) -> {
+                // Show rationale and request permission
+                Toast.makeText(this, "Microphone access is needed for speech-to-text features", Toast.LENGTH_LONG).show()
+                microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+            else -> {
+                // Request the permission directly
+                microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    // Updated function to check if the microphone permission is granted (fixed API level check)
+    private fun isMicrophonePermissionGranted(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Public method to check microphone permission (can be called from anywhere in the app)
+    fun checkMicrophonePermission(): Boolean {
+        return isMicrophonePermissionGranted()
+    }
+
+    // Public method to request microphone permission (can be called from anywhere in the app)
+    fun requestMicrophonePermissionIfNeeded() {
+        if (!isMicrophonePermissionGranted()) {
+            requestMicrophonePermission()
         }
     }
     @RequiresApi(Build.VERSION_CODES.R)
@@ -104,7 +127,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         Firebase.analytics
 
-//        initLogger(this)
         if (FirebaseApp.getApps(this).isEmpty()) {
             FirebaseApp.initializeApp(this)
         }
@@ -112,24 +134,16 @@ class MainActivity : ComponentActivity() {
         initSessionManager(applicationContext)
         initSettings(this)
 
+        // Initialize image cache for persistent avatar storage
+        com.dailydevchallenge.devstreaks.cache.initializeImageCache(this)
 
-        // Request notification permission for Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
-        }
-        // request microphone and sound permissions
-        // Check if microphone permission is granted
-        if (isMicrophonePermissionGranted()) {
-            // Microphone permission is granted, you can start recording
-            Toast.makeText(this, "Microphone permission granted", Toast.LENGTH_SHORT).show()
-        } else {
-            // Microphone permission is not granted, handle accordingly
-            Toast.makeText(this, "Microphone permission not granted", Toast.LENGTH_SHORT).show()
-            requestSoundAndMicrophonePermissions()
-        }
+        // Request notification permission using modern approach
+        requestNotificationPermission()
+
+        // Request microphone permission using modern approach
+        requestMicrophonePermissionIfNeeded()
+
         val launchDestination = intent?.getStringExtra("navigateTo")
-        // getLogger().d("MainActivity", "MainActivity created!")
-
 
         setContent {
             KoinContext {
@@ -152,7 +166,6 @@ class MainActivity : ComponentActivity() {
                     window.navigationBarColor = color
 
                     App(launchDestination = launchDestination)
-//                    startMicrophoneRecording()
                 }
             }
 

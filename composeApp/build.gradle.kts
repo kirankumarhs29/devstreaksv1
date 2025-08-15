@@ -101,6 +101,7 @@ kotlin {
             implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 //            implementation(libs.accompanist.pager)
             implementation(libs.accompanist.permissions)
+            implementation(libs.firebase.storage.ktx)
 //            implementation(libs.accompanist.pager.indicators)
         }
         commonMain.dependencies {
@@ -127,8 +128,10 @@ kotlin {
 
             implementation(compose.foundation)
             implementation(libs.calf.file.picker)
+            implementation(libs.calf.webview)
             implementation(libs.alexzhirkevich.compottie)
             implementation(libs.androidx.annotation)
+            implementation(libs.kamel.image)
 //            implementation(libs.compottie.dot)
 //            implementation(libs.compottie.network)
 
@@ -206,6 +209,8 @@ dependencies {
     implementation(libs.ui.graphics.android)
     implementation(libs.ui.android)
     implementation(libs.ui.text.android)
+    implementation(libs.androidx.compose.foundation.foundation.android)
+
 
     debugImplementation(compose.uiTooling)
     implementation(libs.androidx.foundation.android)
