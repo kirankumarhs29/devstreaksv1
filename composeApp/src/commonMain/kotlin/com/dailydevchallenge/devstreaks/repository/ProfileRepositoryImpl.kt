@@ -45,7 +45,7 @@ class ProfileRepositoryImpl(
         queries.deleteProfile(userId)
     }
 
-    suspend fun saveUserChallengeProgress(progress: UserChallengeProgress) = withContext(Dispatchers.Default) {
+    override suspend fun saveUserChallengeProgress(progress: UserChallengeProgress) = withContext(Dispatchers.Default) {
         queries.insertUserChallengeProgress(
             userId = progress.userId,
             challengeId = progress.challengeId,

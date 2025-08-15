@@ -580,4 +580,51 @@ class FirebaseUserHelperAndroid : FirebaseUserHelper {
             throw e
         }
     }
+
+    // NEW: Implementation of getUserById method
+    override suspend fun getUserById(userId: String): User? {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            logger().d("FirebaseUserHelperAndroid", "getUserById: userId = $userId")
+            val doc = db.collection("users").document(userId).get().await()
+
+            if (!doc.exists()) {
+                logger().w("FirebaseUserHelperAndroid", "getUserById: User document does not exist for userId = $userId")
+                return null
+            }
+
+            createUserFromDocument(doc)
+        } catch (e: Exception) {
+            logger().e("FirebaseUserHelperAndroid", e,"Error getting user by ID: ${e.message}")
+            null
+        }
+    }
+
+    // NEW: Implementation of updateUser method
+    override suspend fun updateUser(user: User): Boolean {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            logger().d("FirebaseUserHelperAndroid", "updateUser: userId = ${user.userId}")
+
+            val userMap = mapOf(
+                "name" to user.username,
+                "email" to user.email,
+                "avatarUrl" to user.avatarUrl,
+                "xp" to user.xp,
+                "level" to user.level,
+                "streak" to user.dailyStreak,
+                "lastLogin" to user.lastLogin,
+                "preferences" to user.preferences,
+                "role" to user.role,
+                "badges" to user.badges
+            )
+
+            db.collection("users").document(user.userId).set(userMap).await()
+            logger().d("FirebaseUserHelperAndroid", "updateUser: Successfully updated user ${user.userId}")
+            true
+        } catch (e: Exception) {
+            logger().e("FirebaseUserHelperAndroid", e,"Error updating user: ${e.message}")
+            false
+        }
+    }
 }

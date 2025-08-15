@@ -51,8 +51,9 @@ fun IntegratedOnboardingScreen(
                 },
                 onSkipClick = { viewModel.skipStep() },
                 onFinishClick = {
-                    navController.navigate(Routes.HomeScreen) {
-                        popUpTo(0) { inclusive = true }
+                    // After onboarding completion, redirect to login for authentication
+                    navController.navigate(Routes.Login) {
+                        popUpTo(Routes.OnboardingScreen) { inclusive = true }
                     }
                 }
             )
@@ -78,33 +79,45 @@ fun IntegratedOnboardingScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             ) { step ->
-                when (step) {
-                    OnboardingStep.WELCOME -> WelcomeStep(
-                        onGetStarted = { viewModel.nextStep() }
-                    )
-                    OnboardingStep.LEARNING_INTENT -> LearningIntentScreen(
-                        viewModel = viewModel,
-                        navController = navController,
-                        resumeChatViewModel = koinInject(), // Inject ResumeChatViewModel
-                        onFinish = { _, _, _, _, _, _, _ ->
-                            // This callback is no longer used since we handle flow in LearningIntentScreen
-                        }
-                    )
-                    OnboardingStep.PERSONALIZATION -> PersonalizationStep(
-                        learningIntent = uiState.learningIntent,
-                        onPersonalize = { viewModel.generatePersonalizedPath() }
-                    )
-                    OnboardingStep.GENERATION -> GenerationStep(
-                        isLoading = uiState.isLoading,
-                        challengePath = uiState.challengePath,
-                        errorMessage = uiState.errorMessage,
-                        onRetry = { viewModel.retryGeneration() },
-                        onComplete = {
-                            navController.navigate(Routes.HomeScreen) {
-                                popUpTo(0) { inclusive = true }
+                when (uiState.currentStep) {
+                    OnboardingStep.WELCOME -> {
+                        WelcomeStep(
+                            onGetStarted = { viewModel.nextStep() },
+                            onQuickSetup = { viewModel.startStreamlinedOnboarding() }
+                        )
+                    }
+                    OnboardingStep.STREAMLINED -> {
+                        StreamlinedOnboardingScreen(
+                            navController = navController,
+                            viewModel = viewModel
+                        )
+                    }
+                    OnboardingStep.LEARNING_INTENT -> {
+                        LearningIntentStep(
+                            currentIntent = uiState.learningIntent,
+                            onIntentUpdate = viewModel::updateLearningIntent
+                        )
+                    }
+                    OnboardingStep.PERSONALIZATION -> {
+                        PersonalizationStep(
+                            learningIntent = uiState.learningIntent,
+                            onPersonalize = { viewModel.generatePersonalizedPath() }
+                        )
+                    }
+                    OnboardingStep.GENERATION -> {
+                        GenerationStep(
+                            isLoading = uiState.isLoading,
+                            challengePath = uiState.challengePath,
+                            errorMessage = uiState.errorMessage,
+                            onRetry = { viewModel.retryGeneration() },
+                            onComplete = {
+                                // After onboarding completion, redirect to login for authentication
+                                navController.navigate(Routes.Login) {
+                                    popUpTo(Routes.OnboardingScreen) { inclusive = true }
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
@@ -168,6 +181,11 @@ private fun OnboardingBottomBar(
     onSkipClick: () -> Unit,
     onFinishClick: () -> Unit
 ) {
+    // Only show bottom bar for non-streamlined steps
+    if (currentStep == OnboardingStep.STREAMLINED) {
+        return
+    }
+
     Surface(
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
@@ -192,7 +210,7 @@ private fun OnboardingBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Skip button (for non-essential steps)
-                if (currentStep != OnboardingStep.GENERATION) {
+                if (currentStep != OnboardingStep.GENERATION && currentStep != OnboardingStep.WELCOME) {
                     OutlinedButton(
                         onClick = onSkipClick,
                         modifier = Modifier.weight(1f)
@@ -219,6 +237,7 @@ private fun OnboardingBottomBar(
                     Text(
                         when (currentStep) {
                             OnboardingStep.WELCOME -> "Get Started"
+                            OnboardingStep.STREAMLINED -> "Continue"
                             OnboardingStep.LEARNING_INTENT -> "Continue"
                             OnboardingStep.PERSONALIZATION -> if (isLoading) "Creating..." else "Create My Path"
                             OnboardingStep.GENERATION -> "Start Learning!"

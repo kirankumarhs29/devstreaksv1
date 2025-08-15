@@ -37,18 +37,33 @@ fun ChallengeDetailScreen(
     navController: NavController,
     day: ChallengeTask,
     isCompleted: Boolean = false,
-    onMarkAsDone: () -> Unit
+    onMarkAsDone: () -> Unit,
+    // Phase 2 adaptive intelligence parameters
+    adaptiveConfig: com.dailydevchallenge.devstreaks.model.AdaptiveChallengeConfig? = null,
+    personalizedCoaching: com.dailydevchallenge.devstreaks.model.PersonalizedCoachingResponse? = null
 ) {
     val repository: ChallengeRepository = koinInject()
     val userStatsManager: UserStatsManager = koinInject()
     val aiFeedbackService: AIFeedbackService = koinInject()
+    val adaptiveOrchestrator: com.dailydevchallenge.devstreaks.service.AdaptiveIntelligenceOrchestrator = koinInject()
+    val profilePreferences: com.dailydevchallenge.devstreaks.features.onboarding.LearningProfilePreferences = koinInject()
+
     val viewModel: ChallengeDetailViewModel = remember {
-        ChallengeDetailViewModel(repository, userStatsManager, aiFeedbackService)
+        ChallengeDetailViewModel(
+            challengeRepository = repository,
+            userStatsManager = userStatsManager,
+            aiFeedbackService = aiFeedbackService,
+            adaptiveOrchestrator = adaptiveOrchestrator,
+            profilePreferences = profilePreferences
+        )
     }
+
     val uiState by viewModel.uiState.collectAsState()
     val aiFeedback by viewModel.aiFeedback.collectAsState()
     val isGeneratingFeedback by viewModel.isGeneratingFeedback.collectAsState()
     val showFeedbackDialog by viewModel.showFeedbackDialog.collectAsState()
+    val currentAdaptiveConfig by viewModel.adaptiveConfig.collectAsState()
+    val currentPersonalizedCoaching by viewModel.personalizedCoaching.collectAsState()
     val logger = remember { getLogger() }
 
     // Load the task when the screen is first displayed

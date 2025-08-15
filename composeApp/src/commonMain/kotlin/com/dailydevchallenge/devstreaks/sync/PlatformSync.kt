@@ -30,6 +30,10 @@ interface FirebaseUserHelper {
     suspend fun getCurrentUserdata(userId: String, email: String) : User
     suspend fun updateUserInFirestore(user: User) // Add this method
 
+    // NEW: Methods needed for ProfileEditViewModel
+    suspend fun getUserById(userId: String): User?
+    suspend fun updateUser(user: User): Boolean
+
     // Enhanced methods for leaderboards and social features
     suspend fun getTopUsersByXP(limit: Int = 100): List<User>
     suspend fun getTopUsersByWeeklyXP(startOfWeek: kotlinx.datetime.Instant, limit: Int = 100): List<Pair<User, Int>>

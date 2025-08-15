@@ -11,10 +11,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import com.dailydevchallenge.devstreaks.notification.getNotificationScheduler
 import com.dailydevchallenge.devstreaks.utils.generateUUID
+import com.dailydevchallenge.devstreaks.utils.getLogger
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
+
+private val logger = getLogger()
 
 data class OnboardingState(
     val currentStep: OnboardingStep = OnboardingStep.WELCOME,
@@ -139,7 +142,7 @@ class OnboardingViewModel(
                     timePerDay = intent.timePerDay,
                     days = 30, // Default 30-day challenge
                     style = intent.learningStyle,
-                    fear = intent.fears,
+                    fear = intent.fears.ifBlank { "None" }, // Provide default value if empty
                     requestId = requestId,
                     useOpenAI = true
                 )
@@ -220,12 +223,17 @@ class OnboardingViewModel(
     fun completeStreamlinedOnboarding() {
         val intent = _uiState.value.learningIntent ?: return
 
+        logger.d("Starting completeStreamlinedOnboarding with intent: ${intent.primaryGoal}")
+
         viewModelScope.launch {
             updateState(isLoading = true, errorMessage = null)
+            logger.d("Set loading state to true")
 
             try {
                 // Generate a quick personalized path using the streamlined data
                 val requestId = generateUUID()
+                logger.d("About to call llmService.generatePlan with goal: ${intent.primaryGoal}")
+
                 val challengePath = llmService.generatePlan(
                     goal = intent.primaryGoal,
                     skills = intent.skillFocus,
@@ -233,13 +241,16 @@ class OnboardingViewModel(
                     timePerDay = intent.timePerDay,
                     days = 30, // Default 30-day challenge
                     style = "adaptive", // Use adaptive style for streamlined onboarding
-                    fear = "", // No fears collected in streamlined version
+                    fear = "None", // Provide default value instead of empty string
                     requestId = requestId,
                     useOpenAI = true
                 )
 
+                logger.d("llmService.generatePlan completed successfully")
+
                 // Save the generated path
                 challengeRepository.savePathToDb(challengePath)
+                logger.d("Saved challenge path to database")
 
                 // Update user context
                 userContextManager.updateUserPreferences(mapOf(
@@ -260,7 +271,10 @@ class OnboardingViewModel(
                     isStreamlinedComplete = true
                 )
 
+                logger.d("Set completion state - isStreamlinedComplete = true")
+
             } catch (e: Exception) {
+                logger.e("Error in completeStreamlinedOnboarding: ${e.message}", e)
                 updateState(
                     isLoading = false,
                     errorMessage = "Failed to create your learning path: ${e.message}"

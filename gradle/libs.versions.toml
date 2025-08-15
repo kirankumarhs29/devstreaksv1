@@ -106,6 +106,7 @@ runtimeJvmstubs = "1.8.3"
 uiGraphicsDesktop = "1.7.0"
 kamel = "0.9.5"
 androidxFoundationAndroid = "1.9.0"
+lifecycleRuntimeComposeAndroid = "2.9.2"
 
 
 [libraries]
@@ -235,6 +236,7 @@ androidx-ui-graphics-desktop = { group = "androidx.compose.ui", name = "ui-graph
 firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx" }
 kamel-image = { module = "media.kamel:kamel-image", version.ref = "kamel" }
 androidx-compose-foundation-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "androidxFoundationAndroid" }
+androidx-lifecycle-runtime-compose-android = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose-android", version.ref = "lifecycleRuntimeComposeAndroid" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

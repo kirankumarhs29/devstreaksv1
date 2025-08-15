@@ -17,7 +17,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun WelcomeStep(
-    onGetStarted: () -> Unit
+    onGetStarted: () -> Unit,
+    onQuickSetup: () -> Unit
 ) {
     var showAnimation by remember { mutableStateOf(false) }
 
@@ -53,16 +54,18 @@ fun WelcomeStep(
                     modifier = Modifier.padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Animated emoji
-                    Text(
-                        text = "🚀",
-                        style = MaterialTheme.typography.displayLarge
+                    // App icon/logo placeholder
+                    Icon(
+                        imageVector = Icons.Default.Code,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = "Welcome to DevStreak!",
+                        text = "Welcome to DevStreaks",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -72,123 +75,156 @@ fun WelcomeStep(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Your personalized coding journey starts here. Build consistent habits, level up your skills, and achieve your developer goals.",
+                        text = "Master coding through personalized challenges and AI coaching",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(48.dp))
 
-        // Feature highlights with staggered animation
-        val features = listOf(
-            Triple("🎯", "Personalized Learning", "AI-powered challenges tailored to your goals"),
-            Triple("🔥", "Build Streaks", "Develop consistent coding habits that stick"),
-            Triple("🏆", "Track Progress", "Watch your skills grow with detailed analytics"),
-            Triple("🤖", "AI Coach", "Get personalized guidance and feedback")
-        )
-
-        features.forEachIndexed { index, (emoji, title, description) ->
-            var isVisible by remember { mutableStateOf(false) }
-
-            LaunchedEffect(showAnimation) {
-                kotlinx.coroutines.delay(200L * (index + 1))
-                isVisible = true
-            }
-
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = slideInHorizontally(
-                    initialOffsetX = { it },
-                    animationSpec = tween(400, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(400))
-            ) {
-                FeatureCard(
-                    emoji = emoji,
-                    title = title,
-                    description = description
-                )
-            }
-
-            if (index < features.size - 1) {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Call to action
+        // Setup options
         AnimatedVisibility(
             visible = showAnimation,
             enter = slideInVertically(
                 initialOffsetY = { it },
-                animationSpec = tween(600, delayMillis = 800, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(600, delayMillis = 800))
+                animationSpec = tween(800, delayMillis = 400)
+            ) + fadeIn(animationSpec = tween(800, delayMillis = 400))
         ) {
-            Text(
-                text = "Ready to transform your coding skills?",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Quick Setup Option (Recommended)
+                SetupOptionCard(
+                    title = "Quick Setup",
+                    subtitle = "3 questions • 1 minute",
+                    description = "Get started fast with smart recommendations",
+                    icon = Icons.Default.Bolt,
+                    isRecommended = true,
+                    onClick = onQuickSetup
+                )
+
+                // Detailed Setup Option
+                SetupOptionCard(
+                    title = "Detailed Setup",
+                    subtitle = "Complete personalization • 5 minutes",
+                    description = "Full customization for maximum personalization",
+                    icon = Icons.Default.Tune,
+                    isRecommended = false,
+                    onClick = onGetStarted
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun FeatureCard(
-    emoji: String,
+private fun SetupOptionCard(
     title: String,
-    description: String
+    subtitle: String,
+    description: String,
+    icon: ImageVector,
+    isRecommended: Boolean,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
+        onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isRecommended)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isRecommended) 8.dp else 4.dp
+        ),
+        border = if (isRecommended) {
+            androidx.compose.foundation.BorderStroke(
+                2.dp,
+                MaterialTheme.colorScheme.primary
+            )
+        } else null
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(
-                        text = emoji,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = if (isRecommended)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isRecommended)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (isRecommended) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ) {
+                            Text(
+                                text = "RECOMMENDED",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isRecommended)
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 2.dp)
                 )
 
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isRecommended)
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = null,
+                tint = if (isRecommended)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

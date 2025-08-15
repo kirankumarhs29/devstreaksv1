@@ -86,6 +86,13 @@ DELETE FROM userProfile WHERE userId = ?;
 selectUserProgressByTask:
 SELECT * FROM UserProgress WHERE completedTaskId = ? AND userId = ?;
 
+-- NEW: Select recent completed tasks for a user
+selectRecentCompletedTasks:
+SELECT completedTaskId FROM UserProgress
+WHERE userId = ?
+ORDER BY completedDate DESC
+LIMIT ?;
+
 insertUserProgress:
 INSERT INTO UserProgress(id, userId, completedTaskId, completedDate) VALUES (?, ?, ?, ?);
 

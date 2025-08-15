@@ -13,6 +13,7 @@ data class ChallengeTask(
     val title: String,
     val type: String, // e.g., DSA, Project, SystemDesign, AI
     val content: String, // Overall summary or context
+    val skill: String? = null,
     val xp: Int,
     val checklist: List<String> = emptyList(),
     val whyItMatters: String? = null,

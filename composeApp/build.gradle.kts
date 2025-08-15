@@ -210,6 +210,7 @@ dependencies {
     implementation(libs.ui.android)
     implementation(libs.ui.text.android)
     implementation(libs.androidx.compose.foundation.foundation.android)
+    implementation(libs.androidx.lifecycle.runtime.compose.android)
 
 
     debugImplementation(compose.uiTooling)

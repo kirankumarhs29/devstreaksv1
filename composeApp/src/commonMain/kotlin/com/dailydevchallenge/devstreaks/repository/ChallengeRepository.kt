@@ -10,9 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.*
 import com.dailydevchallenge.devstreaks.database.toModel // for both extensions
-import com.dailydevchallenge.devstreaks.database.toPreferenceString
 import com.dailydevchallenge.devstreaks.features.feed.UserStats
+import com.dailydevchallenge.devstreaks.model.BaselineMetrics
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
+import com.dailydevchallenge.devstreaks.model.ChallengeCompletionMetrics
 import com.dailydevchallenge.devstreaks.model.ChallengePathWithTasks
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.CompletedChallenge
@@ -23,6 +24,13 @@ import com.dailydevchallenge.devstreaks.settings.UserPreferences
 import com.dailydevchallenge.devstreaks.sync.FirebaseUserHelper
 import com.dailydevchallenge.devstreaks.sync.PlatformSync
 import com.dailydevchallenge.devstreaks.utils.getLogger
+import com.dailydevchallenge.devstreaks.model.PerformanceMetrics
+import com.dailydevchallenge.devstreaks.model.UserPerformanceSummary
+import com.dailydevchallenge.devstreaks.model.DifficultyLevel
+import com.dailydevchallenge.devstreaks.model.DifficultyAdjustment
+import com.dailydevchallenge.devstreaks.model.WeakArea
+import com.dailydevchallenge.devstreaks.service.DifficultyCalculator
+import kotlin.math.roundToInt
 
 
 class ChallengeRepository(
@@ -30,7 +38,8 @@ class ChallengeRepository(
     private val userProfileQueries: UserProfileQueries,
     private val firebaseUserHelper: FirebaseUserHelper
 ) {
-    val Logger  = { getLogger()}
+    val logger  = { getLogger()}
+    private val difficultyCalculator = DifficultyCalculator()
 
     suspend fun savePathToDb(path: ChallengePathResponse): String = withContext(Dispatchers.Default) {
         val pathId = generateUUID()
@@ -162,7 +171,8 @@ class ChallengeRepository(
             lastCompletedDate = today
         )
 
-        Logger().d("ChallengeRepository", "Task completed: XP updated from ${currentStats?.xp ?: 0} to $newXp, Streak: $newStreak")
+        logger().d("ChallengeRepository", "Task completed: XP updated from ${currentStats?.xp ?: 
+        0} to $newXp, Streak: $newStreak")
     }
     suspend fun getXPAndStreak(): Pair<Int, Int> = withContext(Dispatchers.Default) {
         val stats = pathQueries.selectUserStats().executeAsOneOrNull()
@@ -250,81 +260,361 @@ class ChallengeRepository(
         PlatformSync.uploadReflection(reflection)
     }
 
-    private suspend fun getAllCompletedChallenges(): List<CompletedChallenge> = withContext(Dispatchers.Default) {
-        pathQueries.selectAllCompletedChallenges().executeAsList().map {
-            CompletedChallenge(it.pathId, it.completedDate)
+    // NEW: Performance tracking methods for dynamic difficulty adjustment
+
+    /**
+     * Record detailed performance metrics for a completed task
+     */
+    suspend fun recordPerformanceMetrics(metrics: PerformanceMetrics) = withContext(Dispatchers.Default) {
+        pathQueries.insertPerformanceMetrics(
+            id = metrics.id,
+            userId = metrics.userId,
+            taskId = metrics.taskId,
+            startTime = metrics.startTime,
+            endTime = metrics.endTime,
+            durationMillis = metrics.durationMillis,
+            attempts = metrics.attempts.toLong(),
+            hintsUsed = metrics.hintsUsed.toLong(),
+            completed = if (metrics.completed) 1 else 0,
+            errorCount = metrics.errorCount.toLong(),
+            difficultyLevel = metrics.difficultyLevel.value.toLong(),
+            timestamp = metrics.timestamp
+        )
+
+        logger().d("ChallengeRepository", "Performance metrics recorded: Task=${metrics.taskId}, Duration=${metrics.durationMillis}ms, Attempts=${metrics.attempts}")
+    }
+
+    /**
+     * Calculate user performance summary for difficulty adjustment
+     */
+    suspend fun calculateUserPerformanceSummary(userId: String, recentTasksLimit: Int = 10): UserPerformanceSummary = withContext(Dispatchers.Default) {
+        val recentMetrics = pathQueries.selectRecentPerformanceMetrics(userId, recentTasksLimit.toLong()).executeAsList()
+
+        if (recentMetrics.isEmpty()) {
+            return@withContext UserPerformanceSummary(
+                userId = userId,
+                averageCompletionTime = 0L,
+                successRate = 0.0,
+                averageAttempts = 0.0,
+                averageHintsUsed = 0.0,
+                averageErrorCount = 0.0,
+                currentDifficultyLevel = DifficultyLevel.EASY,
+                recentTaskCount = 0
+            )
+        }
+
+        val completedTasks = recentMetrics.filter { it.completed.toInt() == 1 }
+        val avgCompletionTime = if (completedTasks.isNotEmpty()) {
+            completedTasks.map { it.durationMillis }.average().toLong()
+        } else 0L
+
+        val successRate = completedTasks.size.toDouble() / recentMetrics.size.toDouble()
+        val avgAttempts = recentMetrics.map { it.attempts.toDouble() }.average()
+        val avgHints = recentMetrics.map { it.hintsUsed.toDouble() }.average()
+        val avgErrors = recentMetrics.map { it.errorCount.toDouble() }.average()
+
+        // Get current difficulty level from most recent task
+        val currentDifficultyLevel = recentMetrics.firstOrNull()?.difficultyLevel?.let {
+            DifficultyLevel.fromValue(it.toInt())
+        } ?: DifficultyLevel.EASY
+
+        UserPerformanceSummary(
+            userId = userId,
+            averageCompletionTime = avgCompletionTime,
+            successRate = successRate,
+            averageAttempts = avgAttempts,
+            averageHintsUsed = avgHints,
+            averageErrorCount = avgErrors,
+            currentDifficultyLevel = currentDifficultyLevel,
+            recentTaskCount = recentMetrics.size
+        )
+    }
+
+    /**
+     * Get difficulty adjustment recommendation for user
+     */
+    suspend fun getDifficultyAdjustment(userId: String): DifficultyAdjustment = withContext(Dispatchers.Default) {
+        val performanceSummary = calculateUserPerformanceSummary(userId)
+        val baselineMetrics = emptyMap<DifficultyLevel, com.dailydevchallenge.devstreaks.service.BaselineMetrics>() // Using defaults
+
+        return@withContext difficultyCalculator.calculateDifficultyAdjustment(performanceSummary, baselineMetrics)
+    }
+
+    /**
+     * Adjust challenge XP based on difficulty level
+     */
+    fun calculateAdjustedXP(baseXP: Int, difficultyLevel: DifficultyLevel): Int {
+        return (baseXP * difficultyLevel.multiplier).roundToInt()
+    }
+
+    /**
+     * Get tasks filtered by difficulty level
+     */
+    suspend fun getTasksForPathWithDifficulty(pathId: String, difficultyLevel: DifficultyLevel): List<ChallengeTask> = withContext(Dispatchers.Default) {
+        val allTasks = getTasksForPath(pathId)
+
+        // Filter or modify tasks based on difficulty level
+        return@withContext allTasks.map { task ->
+            val adjustedXP = calculateAdjustedXP(task.xp, difficultyLevel)
+            val adjustedChallenges = adjustChallengesForDifficulty(task.challenges, difficultyLevel)
+
+            task.copy(
+                xp = adjustedXP,
+                challenges = adjustedChallenges
+            )
         }
     }
 
-    suspend fun getAllReflections(): List<TaskReflection> = withContext(Dispatchers.Default) {
-        pathQueries.selectAllReflections().executeAsList().map {
-            TaskReflection(it.id, it.taskId, it.reflection, it.timestamp)
+    /**
+     * Adjust challenge activities based on difficulty level
+     */
+    private fun adjustChallengesForDifficulty(challenges: List<ChallengeActivity>, difficultyLevel: DifficultyLevel): List<ChallengeActivity> {
+        return challenges.map { challenge ->
+            when (difficultyLevel) {
+                DifficultyLevel.BEGINNER -> challenge.copy(
+                    starterCode = enhanceStarterCodeForBeginners(challenge.starterCode),
+                    explanation = addDetailedExplanation(challenge.explanation)
+                )
+                DifficultyLevel.EXPERT -> challenge.copy(
+                    starterCode = reduceStarterCodeHints(challenge.starterCode),
+                    explanation = reduceExplanationDetail(challenge.explanation)
+                )
+                else -> challenge
+            }
         }
     }
-    // fetch generated course by requestId from Firestore
-    suspend fun fetchGeneratedCourse(requestId: String): ChallengePathResponse? {
-        return PlatformSync.fetchGeneratedCourse(requestId)
+
+    private fun enhanceStarterCodeForBeginners(starterCode: String?): String? {
+        return starterCode?.let { code ->
+            // Add more comments and hints for beginners
+            "// TODO: Complete the implementation below\n// Hint: Follow the step-by-step approach\n$code"
+        }
     }
+
+    private fun addDetailedExplanation(explanation: String?): String? {
+        return explanation?.let { exp ->
+            "$exp\n\nBeginner tip: Take your time to understand each step before proceeding."
+        }
+    }
+
+    private fun reduceStarterCodeHints(starterCode: String?): String? {
+        return starterCode?.let { code ->
+            // Remove obvious hints for expert level
+            code.replace(Regex("//\\s*TODO:.*"), "")
+                .replace(Regex("//\\s*Hint:.*"), "")
+                .trim()
+        }
+    }
+
+    private fun reduceExplanationDetail(explanation: String?): String? {
+        return explanation?.let { exp ->
+            // Keep only essential information for experts
+            exp.split("\n").take(2).joinToString("\n")
+        }
+    }
+
+    /**
+     * Get user by ID - needed for ProfileEditViewModel
+     */
     suspend fun getUserById(userId: String): User? = withContext(Dispatchers.Default) {
-        // If userId is not provided, use the one from preferences
-        val userId = if (userId.isBlank()) UserPreferences.getSafeUserId() else userId
-        val localData = userProfileQueries.getUserById(userId).executeAsOneOrNull()?.toModel()
-        getLogger().d("ChallengeRepository", "getUserById: Local user data for $userId: $localData")
-        if (localData != null) {
-            // If user exists in local DB, return it
-            return@withContext localData
-        } else {
-            val userData =
-                firebaseUserHelper.getCurrentUserdata(userId, UserPreferences.getEmailId() ?: "")
-                getLogger().d("ChallengeRepository", "getUserById: Fetched user data from remote: $userData")
-            return@withContext userData
-        }
-    }
-
-    suspend fun insertUser(user: User) = withContext(Dispatchers.Default) {
-        userProfileQueries.insertUser(
-            user.userId, user.email, user.passwordHash, user.username,
-            user.avatarUrl, user.createdAt, user.lastLogin, user.xp.toLong(),
-            user.level ?: 1, user.dailyStreak ?: 0,
-            user.streakStartDate?.toEpochMilliseconds(),
-            user.preferences.toPreferenceString()
-            , user.role,
-            user.badges.joinToString("|")
-        )
-    }
-
-    suspend fun updateUser(user: User) = withContext(Dispatchers.Default) {
-        // Update local database
-        userProfileQueries.updateUser(
-            email = user.email,
-            passwordHash = user.passwordHash,
-            username = user.username,
-            avatarUrl = user.avatarUrl,
-            lastLogin = user.lastLogin,
-            xp = user.xp.toLong(),
-            level = user.level ?: 1,
-            dailyStreak = user.dailyStreak ?: 0,
-            streakStartDate = user.streakStartDate?.toEpochMilliseconds(),
-            role = user.role,
-            badges = user.badges.joinToString("|"),
-            preferences = user.preferences.toPreferenceString(),
-            userId = user.userId
-        )
-        println("ChallengeRepository: Updated user ${user.userId} with avatarUrl: ${user.avatarUrl}")
-
-        // Sync with Firebase
-        try {
-            firebaseUserHelper.updateUserInFirestore(user)
-            getLogger().d("ChallengeRepository", "User ${user.userId} successfully synced to Firebase")
+        return@withContext try {
+            // Try to get user from Firebase first
+            firebaseUserHelper.getUserById(userId)
         } catch (e: Exception) {
-            getLogger().e("ChallengeRepository", e, "Failed to sync user ${user.userId} to Firebase: ${e.message}")
-            // Don't throw the exception to prevent local update rollback
+            logger().e("ChallengeRepository", e,"Error fetching user by ID: ${e.message}")
+            null
         }
-
-        // Let's verify the update worked by reading it back
-        val updatedUser = userProfileQueries.getUserById(user.userId).executeAsOneOrNull()
-        println("ChallengeRepository: Verification - User after update: $updatedUser")
-        println("ChallengeRepository: Verification - avatarUrl in DB: ${updatedUser?.avatarUrl}")
     }
 
+    /**
+     * Update user - needed for ProfileEditViewModel
+     */
+    suspend fun updateUser(user: User): Boolean = withContext(Dispatchers.Default) {
+        return@withContext try {
+            firebaseUserHelper.updateUser(user)
+            true
+        } catch (e: Exception) {
+            logger().e("ChallengeRepository", e,"Error updating user: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Fetch generated course - needed for HomeViewModel
+     */
+    suspend fun fetchGeneratedCourse(requestId: String): ChallengePathResponse? = withContext(Dispatchers.Default) {
+        return@withContext try {
+            PlatformSync.fetchGeneratedCourse(requestId)
+        } catch (e: Exception) {
+            logger().e("ChallengeRepository", e,"Error fetching generated course: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * ADAPTIVE INTELLIGENCE METHODS
+     * Supporting dynamic difficulty adjustment, performance tracking, and personalized challenges
+     */
+
+    /**
+     * Get adaptive challenge based on user's performance and preferences
+     */
+    suspend fun getAdaptiveChallenge(
+        userId: String,
+        difficulty: DifficultyLevel,
+        skillArea: String?,
+        excludeCompleted: Boolean = true
+    ): ChallengeTask? = withContext(Dispatchers.Default) {
+        try {
+            // Get all available tasks
+            val allTasks = pathQueries.selectAllPaths().executeAsList() // Using existing query
+
+            // Filter completed tasks if requested
+            val availableTasks = if (excludeCompleted) {
+                val completedTaskIds = userProfileQueries.selectAllUserProgress()
+                    .executeAsList().map { it.completedTaskId }.toSet()
+                allTasks.filter { !completedTaskIds.contains(it.id) }
+            } else {
+                allTasks
+            }
+
+            // Filter by skill area if specified
+            val filteredTasks = if (skillArea != null) {
+                availableTasks.filter { task ->
+                    task.track.contains(skillArea, ignoreCase = true)
+                }
+            } else {
+                availableTasks
+            }
+
+            // Select random task for now (can be enhanced with proper difficulty matching)
+            val selectedPath = filteredTasks.randomOrNull()
+
+            selectedPath?.let { path ->
+                val tasks = getTasksForPath(path.id)
+                tasks.randomOrNull()
+            }
+        } catch (e: Exception) {
+            logger().e("ChallengeRepository", e, "Error getting adaptive challenge: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Save performance metrics for adaptive intelligence
+     */
+    suspend fun savePerformanceMetrics(metrics: PerformanceMetrics) = withContext(Dispatchers.Default) {
+        pathQueries.insertPerformanceMetrics(
+            id = metrics.id,
+            userId = metrics.userId,
+            taskId = metrics.taskId,
+            startTime = metrics.startTime,
+            endTime = metrics.endTime,
+            completed = metrics.durationMillis,
+            attempts = metrics.attempts.toLong(),
+            hintsUsed = metrics.hintsUsed.toLong(),
+            errorCount = metrics.errorCount.toLong(),
+            difficultyLevel = metrics.difficultyLevel.value.toLong(),
+            timestamp = metrics.timestamp,
+            durationMillis = metrics.durationMillis
+
+        )
+
+        logger().d("ChallengeRepository", "Performance metrics saved for challenge ${metrics.taskId}")
+    }
+
+
+    /**
+     * Get recent challenges for context building
+     */
+    suspend fun getRecentChallenges(userId: String, limit: Int = 5): List<ChallengeTask> =
+        withContext(Dispatchers.Default) {
+
+        // Use existing query to get recent completed tasks
+        val recentTaskRows = userProfileQueries.selectRecentCompletedTasks(userId, limit.toLong()).executeAsList()
+        val tasks = mutableListOf<ChallengeTask>()
+
+        recentTaskRows.forEach { row ->
+            row.completedTaskId?.let { taskId ->
+                getTaskById(taskId)?.let { task ->
+                    tasks.add(task)
+                }
+            }
+        }
+
+        return@withContext tasks
+    }
+
+    /**
+     * Get recent performance metrics for real-time analysis
+     */
+    suspend fun getRecentPerformanceMetrics(userId: String, limit: Int = 10): List<PerformanceMetrics> =
+        withContext(Dispatchers.Default) {
+            val dbMetrics = pathQueries.selectRecentPerformanceMetrics(userId, limit.toLong()).executeAsList()
+            return@withContext dbMetrics.map { dbMetric ->
+                PerformanceMetrics(
+                    id = dbMetric.id,
+                    userId = dbMetric.userId,
+                    taskId = dbMetric.taskId,
+                    startTime = dbMetric.startTime,
+                    endTime = dbMetric.endTime,
+                    durationMillis = dbMetric.durationMillis,
+                    attempts = dbMetric.attempts.toInt(),
+                    hintsUsed = dbMetric.hintsUsed.toInt(),
+                    completed = dbMetric.completed.toInt() == 1,
+                    errorCount = dbMetric.errorCount.toInt(),
+                    difficultyLevel = DifficultyLevel.fromValue(dbMetric.difficultyLevel.toInt()),
+                    timestamp = dbMetric.timestamp
+                )
+            }
+        }
+
+    /**
+     * Check if user has completed Day 2 and should transition to adaptive challenges
+     */
+    suspend fun shouldTriggerAdaptiveChallenges(userId: String): Boolean = withContext(Dispatchers.Default) {
+        val completedTasks = userProfileQueries.selectAllUserProgress()
+            .executeAsList()
+            .filter { it.userId == userId }
+
+        // Check if user has completed at least 2 days worth of challenges
+        val completedDays = completedTasks.map { progress ->
+            pathQueries.selectTaskById(progress.completedTaskId ?: "").executeAsOneOrNull()?.day?.toInt() ?: 0
+        }.distinct()
+
+        return@withContext completedDays.contains(2) && completedDays.size >= 2
+    }
+
+    /**
+     * Trigger automatic adaptive challenge generation after Day 2 completion
+     */
+//    suspend fun triggerAdaptiveChallengeGeneration(userId: String): Boolean = withContext(Dispatchers.Default) {
+//        try {
+//            if (!shouldTriggerAdaptiveChallenges(userId)) {
+//                return@withContext false
+//            }
+//
+//            // Generate next adaptive challenges based on performance
+//            val performanceSummary = calculateUserPerformanceSummary(userId)
+//            val weakAreas = pathQueries.selectWeakAreasForUser(userId).executeAsList()
+//
+//            // Create adaptive challenge generation request
+//            val generationRequest = AdaptiveChallengeGenerationRequest(
+//                userId = userId,
+//                targetDifficulty = performanceSummary.currentDifficultyLevel,
+//                weakAreas = weakAreas.map { it.skillArea },
+//                preferredTopics = getPreferredTopicsFromHistory(userId),
+//                generationCount = 5 // Generate 5 challenges ahead
+//            )
+//
+//            // Queue background generation
+//            queueAdaptiveChallengeGeneration(generationRequest)
+//
+//            logger().d("ChallengeRepository", "Triggered adaptive challenge generation for user $userId")
+//            return@withContext true
+//        } catch (e: Exception) {
+//            logger().e("ChallengeRepository", e, "Error triggering adaptive generation: ${e.message}")
+//            return@withContext false
+//        }
+//    }
 }

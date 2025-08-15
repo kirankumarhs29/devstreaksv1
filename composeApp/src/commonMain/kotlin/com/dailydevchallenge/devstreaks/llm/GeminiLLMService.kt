@@ -226,10 +226,18 @@ class GeminiLLMService(
     override suspend fun generateResponse(prompt: List<ChatMessage>): String {
         logger.d("Sending prompt to Gemini: $prompt")
 
+        // Firebase Cloud Function expects direct array of chat messages
+        val payload = prompt.map { message ->
+            mapOf(
+                "role" to message.role,
+                "content" to message.content
+            )
+        }
+
         val response = retryWithBackoff {
             client.post("https://us-central1-devsteaks.cloudfunctions.net/generateResponse") {
                 contentType(ContentType.Application.Json)
-                setBody(prompt) // Sending List<ChatMessage> directly
+                setBody(payload) // Send direct array of messages
             }
         }
 
@@ -237,12 +245,22 @@ class GeminiLLMService(
         logger.d("Gemini raw chat response:\n$body")
 
         return try {
-            Json.parseToJsonElement(body)
-                .jsonObject["reply"]  // ✅ Matches Firebase format
-                ?.jsonPrimitive?.content ?: "No response from DevCoach."
+            val jsonResponse = Json.parseToJsonElement(body).jsonObject
+
+            // Check for error first
+            if (jsonResponse.containsKey("error")) {
+                val errorMessage = jsonResponse["error"]?.jsonPrimitive?.content ?: "Unknown error"
+                logger.e("Gemini API returned error: $errorMessage")
+                return "I'm having trouble connecting to my AI brain right now. Please try again in a moment! 🤖"
+            }
+
+            // Extract reply from response
+            jsonResponse["reply"]?.jsonPrimitive?.content
+                ?: jsonResponse["response"]?.jsonPrimitive?.content // Try alternative field name
+                ?: "No response from DevCoach."
         } catch (e: Exception) {
             logger.e("Failed to parse DevCoach response", e)
-            "Oops, DevCoach couldn't reply."
+            "Sorry, I'm having trouble understanding the response. Let me try to help you differently! 🤗"
         }
     }
     override suspend fun reviewCode(activityPrompt: String, language: String?, userCode: String):

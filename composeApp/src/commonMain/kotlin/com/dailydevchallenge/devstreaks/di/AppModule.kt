@@ -33,6 +33,11 @@ import com.dailydevchallenge.devstreaks.repository.ProfileRepository
 import com.dailydevchallenge.devstreaks.repository.ProfileRepositoryImpl
 import com.dailydevchallenge.devstreaks.repository.ResumeAnalysisRepository
 import com.dailydevchallenge.devstreaks.repository.InterviewRepository
+import com.dailydevchallenge.devstreaks.service.AdaptiveIntelligenceOrchestrator
+import com.dailydevchallenge.devstreaks.service.DifficultyCalculator
+import com.dailydevchallenge.devstreaks.service.PersonalizedAICoachingService
+import com.dailydevchallenge.devstreaks.service.RealTimeWeakAreaMonitoringService
+import com.dailydevchallenge.devstreaks.service.WeakAreaDetectionService
 
 val appModule = module {
 
@@ -71,11 +76,18 @@ val appModule = module {
     single { AIContextManager() }
     single { UnifiedAICoachService(get(), get(), get(), get()) }
 
+    // Phase 2 Adaptive Intelligence Services - Core services need to be available globally
+    single { DifficultyCalculator() }
+    single { WeakAreaDetectionService(get()) }
+    single { PersonalizedAICoachingService(get(), get()) }
+    single { RealTimeWeakAreaMonitoringService(get()) }
+    single { AdaptiveIntelligenceOrchestrator(get(), get(), get(), get()) }
+
     single { LearningProfilePreferences }
 
     // ViewModels - Updated to use unified AI service
     single { OnboardingViewModel(get(), get(), get(), get()) }
-    single { HomeViewModel(get(), get(), get(), get(), get()) }
+    single { HomeViewModel(get(), get(), get(), get(), get() ,get()) }
     single { DevChatViewModel(get(), get(), get(), get(), get()) }
     single {ProfileViewModel(repo = get())}
     single { ResumeChatViewModel(get(), get(), get(), get(), get()) }
