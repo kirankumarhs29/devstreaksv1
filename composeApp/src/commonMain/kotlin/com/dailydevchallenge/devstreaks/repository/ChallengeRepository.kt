@@ -1,6 +1,7 @@
 package com.dailydevchallenge.devstreaks.repository
 
 import com.dailydevchallenge.database.ChallengePathQueries
+import com.dailydevchallenge.database.SelectAllUserProgress
 import com.dailydevchallenge.database.UserProfileQueries
 import com.dailydevchallenge.database.UserProgress
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
@@ -42,6 +43,13 @@ class ChallengeRepository(
     private val difficultyCalculator = DifficultyCalculator()
 
     suspend fun savePathToDb(path: ChallengePathResponse): String = withContext(Dispatchers.Default) {
+        // Check if similar content already exists before saving
+        val existingPath = checkForExistingContent(path.track)
+        if (existingPath != null) {
+            logger().d("ChallengeRepository", "Reusing existing path: ${existingPath.id}")
+            return@withContext existingPath.id
+        }
+        
         val pathId = generateUUID()
         pathQueries.insertPath(id = pathId, track = path.track)
 
@@ -81,6 +89,114 @@ class ChallengeRepository(
         }
 
         return@withContext pathId
+    }
+
+    /**
+     * Check for existing content before AI generation to enable reuse
+     */
+    suspend fun checkForExistingContent(track: String): ChallengePath? = withContext(Dispatchers.Default) {
+        return@withContext pathQueries.checkExistingChallengePath(track).executeAsOneOrNull()?.let {
+            ChallengePath(it.id, it.track)
+        }
+    }
+
+    /**
+     * Find similar tasks for content reuse
+     */
+    suspend fun findSimilarTasks(type: String, keyword: String): List<ChallengeTask> = withContext(Dispatchers.Default) {
+        return@withContext pathQueries.findSimilarTasks(type, keyword, keyword).executeAsList().map { result ->
+            // Create ChallengeTask from partial query result
+            ChallengeTask(
+                id = result.id,
+                pathId = "", // Not available in partial result
+                day = 0, // Not available in partial result
+                title = result.title,
+                type = result.type,
+                content = result.content,
+                xp = 0, // Not available in partial result
+                challenges = emptyList() // Will be loaded separately if needed
+            )
+        }
+    }
+
+    /**
+     * Check if specific activity type already exists
+     */
+    suspend fun checkExistingActivity(type: String, prompt: String): List<ChallengeActivity> = withContext(Dispatchers.Default) {
+        return@withContext pathQueries.checkExistingActivity(type, prompt).executeAsList().map { result ->
+            // Create ChallengeActivity from partial query result
+            ChallengeActivity(
+                id = result.id,
+                type = com.dailydevchallenge.devstreaks.model.ActivityType.valueOf(result.type),
+                prompt = result.prompt,
+                options = null, // Not available in partial result
+                correctAnswer = null, // Not available in partial result
+                language = null, // Not available in partial result
+                starterCode = null, // Not available in partial result
+                explanation = null, // Not available in partial result
+                videoUrl = null // Not available in partial result
+            )
+        }
+    }
+
+    /**
+     * Get reusable content by skill area
+     */
+    suspend fun getReusableContentBySkill(skillKeyword: String): List<Pair<ChallengeTask, List<ChallengeActivity>>> = withContext(Dispatchers.Default) {
+        val results = pathQueries.getReusableContentBySkill(skillKeyword, skillKeyword).executeAsList()
+        val taskMap = mutableMapOf<String, MutableList<ChallengeActivity>>()
+        val tasks = mutableMapOf<String, ChallengeTask>()
+
+        results.forEach { row ->
+            val taskId = row.id
+            if (!tasks.containsKey(taskId)) {
+                tasks[taskId] = ChallengeTask(
+                    id = row.id,
+                    pathId = "", // Will be filled from path lookup if needed
+                    day = 1,
+                    title = row.title,
+                    type = row.type,
+                    content = row.content,
+                    xp = 50,
+                    checklist = emptyList(),
+                    whyItMatters = "",
+                    tip = "",
+                    challenges = emptyList()
+                )
+                taskMap[taskId] = mutableListOf()
+            }
+
+            row.prompt?.let { prompt ->
+                row.activityType?.let { activityType ->
+                    taskMap[taskId]?.add(ChallengeActivity(
+                        id = generateUUID(),
+                        type = com.dailydevchallenge.devstreaks.model.ActivityType.valueOf(activityType.uppercase()),
+                        prompt = prompt
+                    ))
+                }
+            }
+        }
+
+        return@withContext tasks.map { (taskId, task) ->
+            task to (taskMap[taskId] ?: emptyList())
+        }
+    }
+
+    /**
+     * Check if content was recently generated to avoid duplication
+     */
+    suspend fun isRecentContent(track: String): Boolean = withContext(Dispatchers.Default) {
+        val count = pathQueries.checkRecentContent(track).executeAsOne()
+        return@withContext count > 0
+    }
+
+    /**
+     * Find content gaps for targeted generation
+     */
+    suspend fun findContentGaps(minCount: Long = 3): List<Pair<String, Long>> = withContext(Dispatchers.Default) {
+        return@withContext pathQueries.findContentGaps(minCount).executeAsList().map { 
+            it.type to it.count 
+        }
     }
 
     suspend fun getTasksForPath(pathId: String): List<ChallengeTask> = withContext(Dispatchers.Default) {
@@ -212,7 +328,7 @@ class ChallengeRepository(
             .associate { it.item to (it.isChecked.toInt() != 0) }
     }
 
-    suspend fun getAllUserProgress(): List<UserProgress> {
+    suspend fun getAllUserProgress(): List<SelectAllUserProgress> {
         return userProfileQueries.selectAllUserProgress().executeAsList()
     }
 
@@ -467,38 +583,79 @@ class ChallengeRepository(
     ): ChallengeTask? = withContext(Dispatchers.Default) {
         try {
             // Get all available tasks
-            val allTasks = pathQueries.selectAllPaths().executeAsList() // Using existing query
+            val allPaths = pathQueries.selectAllPaths().executeAsList()
+            val allTasksDb = mutableListOf<com.dailydevchallenge.database.ChallengeTask>()
 
-            // Filter completed tasks if requested
-            val availableTasks = if (excludeCompleted) {
-                val completedTaskIds = userProfileQueries.selectAllUserProgress()
-                    .executeAsList().map { it.completedTaskId }.toSet()
-                allTasks.filter { !completedTaskIds.contains(it.id) }
-            } else {
-                allTasks
+            allPaths.forEach { path ->
+                val tasks = pathQueries.selectTasksForPath(path.id).executeAsList()
+                allTasksDb.addAll(tasks) // ✅ Now using correct database type
+            }
+
+            // Convert database ChallengeTask to model ChallengeTask
+            val allTasks = allTasksDb.map { dbTask ->
+                val activities = pathQueries.selectActivitiesByTask(dbTask.id)
+                    .executeAsList()
+                    .map { it.toModel() }
+                dbTask.toModel(activities) // ✅ Extension converts db → model
             }
 
             // Filter by skill area if specified
             val filteredTasks = if (skillArea != null) {
-                availableTasks.filter { task ->
-                    task.track.contains(skillArea, ignoreCase = true)
+                allTasks.filter { task ->
+                    task.title.contains(skillArea, ignoreCase = true) ||
+                            task.type.contains(skillArea, ignoreCase = true) ||
+                            task.content.contains(skillArea, ignoreCase = true)
                 }
             } else {
-                availableTasks
+                allTasks
             }
 
-            // Select random task for now (can be enhanced with proper difficulty matching)
-            val selectedPath = filteredTasks.randomOrNull()
-
-            selectedPath?.let { path ->
-                val tasks = getTasksForPath(path.id)
-                tasks.randomOrNull()
+            // Filter by difficulty based on XP
+            val difficultyFiltered = filteredTasks.filter { task ->
+                when (difficulty) {
+                    DifficultyLevel.BEGINNER, DifficultyLevel.EASY -> task.xp <= 20
+                    DifficultyLevel.MEDIUM -> task.xp in 21..40
+                    DifficultyLevel.HARD -> task.xp in 41..60
+                    DifficultyLevel.EXPERT -> task.xp > 60
+                }
             }
+
+            // Exclude completed tasks if requested
+            val completedTaskIds = getCompletedTaskIds(userId)
+            val finalTasks = if (excludeCompleted) {
+                difficultyFiltered.filter { it.id !in completedTaskIds }
+            } else {
+                difficultyFiltered
+            }
+
+            finalTasks.randomOrNull() // ✅ Return random task or null
         } catch (e: Exception) {
             logger().e("ChallengeRepository", e, "Error getting adaptive challenge: ${e.message}")
             null
         }
     }
+    private suspend fun getCompletedTaskIds(userId: String): Set<String> {
+        return try {
+            userProfileQueries.selectAllUserProgress().executeAsList()
+                .filter { it.userId == userId }
+                .mapNotNull { it.completedTaskId } // ✅ Get task IDs, not path IDs
+                .toSet()
+        } catch (e: Exception) {
+            emptySet()
+        }
+    }
+    private suspend fun updateUserXP(userId: String, xp: Int) {
+        try {
+            val currentUser = userProfileQueries.getUserById(userId).executeAsOneOrNull()
+            if (currentUser != null) {
+                val newXP = (currentUser.xp ?: 0L) + xp
+                userProfileQueries.updateUserXP(xp.toLong(), userId)
+            }
+        } catch (e: Exception) {
+            // Handle error
+        }
+    }
+
 
     /**
      * Save performance metrics for adaptive intelligence
@@ -510,13 +667,13 @@ class ChallengeRepository(
             taskId = metrics.taskId,
             startTime = metrics.startTime,
             endTime = metrics.endTime,
-            completed = metrics.durationMillis,
+            durationMillis = metrics.durationMillis,
             attempts = metrics.attempts.toLong(),
             hintsUsed = metrics.hintsUsed.toLong(),
+            completed = if (metrics.completed) 1L else 0L,
             errorCount = metrics.errorCount.toLong(),
             difficultyLevel = metrics.difficultyLevel.value.toLong(),
-            timestamp = metrics.timestamp,
-            durationMillis = metrics.durationMillis
+            timestamp = metrics.timestamp
 
         )
 
@@ -617,4 +774,77 @@ class ChallengeRepository(
 //            return@withContext false
 //        }
 //    }
+
+    /**
+     * Get user performance summary for adaptive learning
+     */
+    suspend fun getUserPerformanceSummary(userId: String): UserPerformanceSummary = withContext(Dispatchers.Default) {
+        val recentMetrics = getRecentPerformanceMetrics(userId, 20)
+        val completedTasks = userProfileQueries.selectAllUserProgress()
+            .executeAsList()
+            .filter { it.userId == userId }
+
+        val successRate = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.count { it.completed }.toDouble() / recentMetrics.size.toDouble()
+        } else 0.0
+
+        val averageCompletionTime = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.filter { it.completed }.map { it.durationMillis }.average().toLong()
+        } else 0L
+
+        val averageAttempts = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.map { it.attempts.toDouble() }.average()
+        } else 0.0
+
+        val averageHintsUsed = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.map { it.hintsUsed.toDouble() }.average()
+        } else 0.0
+
+        val averageErrorCount = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.map { it.errorCount.toDouble() }.average()
+        } else 0.0
+
+        val currentDifficultyLevel = if (recentMetrics.isNotEmpty()) {
+            recentMetrics.first().difficultyLevel
+        } else DifficultyLevel.EASY
+
+        return@withContext UserPerformanceSummary(
+            userId = userId,
+            averageCompletionTime = averageCompletionTime,
+            successRate = successRate,
+            averageAttempts = averageAttempts,
+            averageHintsUsed = averageHintsUsed,
+            averageErrorCount = averageErrorCount,
+            currentDifficultyLevel = currentDifficultyLevel,
+            recentTaskCount = recentMetrics.size
+        )
+    }
+
+    suspend fun getUserPerformanceMetrics(userId: String): com.dailydevchallenge.devstreaks.model.UserPerformanceMetrics? = withContext(Dispatchers.Default) {
+        try {
+            val completedProgress = userProfileQueries.selectAllUserProgress().executeAsList()
+                .filter { it.userId == userId && it.completedTaskId != null }
+            if (completedProgress.isEmpty()) return@withContext null
+
+            // For each completed progress, get PerformanceMetrics by taskId
+            val metricsList = completedProgress.mapNotNull { progress ->
+                val perf = pathQueries.selectPerformanceByTask(progress.completedTaskId!!, userId).executeAsOneOrNull()
+                perf
+            }.filter { it.completed.toInt() == 1 }
+            if (metricsList.isEmpty()) return@withContext null
+
+            val totalChallenges = metricsList.size
+            val averageScore = metricsList.map { it.attempts.toDouble() }.average() // Replace with actual score if available
+            val averageTime = metricsList.map { it.durationMillis.toDouble() }.average()
+
+            com.dailydevchallenge.devstreaks.model.UserPerformanceMetrics(
+                totalChallenges = totalChallenges,
+                averageScore = averageScore,
+                averageTime = averageTime.toLong()
+            )
+        } catch (e: Exception) {
+            logger().d("ChallengeRepository", "Error in getUserPerformanceMetrics: ${e.message}")
+            null
+        }
+    }
 }

@@ -24,7 +24,7 @@ enum class ChallengeDifficulty {
 }
 
 enum class ChallengeStatus {
-    PENDING, COMPLETED, FAILED
+    PENDING, COMPLETED, FAILED, OPEN_FOR_REGISTRATION, ACTIVE, ARCHIVED
 }
 
 data class UserChallengeProgress(

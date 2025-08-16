@@ -2,11 +2,13 @@ package com.dailydevchallenge.devstreaks.model
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.KeepGeneratedSerializer
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 
 // ChallengeTask.kt
 @Serializable
-data class ChallengeTask(
+data class ChallengeTask @OptIn(ExperimentalTime::class) constructor(
     val id: String,
     val pathId: String,
     val day: Int,
@@ -22,7 +24,12 @@ data class ChallengeTask(
     val aiBreakdown: String? = null,
     val videoUrl: String? = null,
     val codeExample: String? = null,
-    val challenges: List<ChallengeActivity> = emptyList()
+    val challenges: List<ChallengeActivity> = emptyList(),
+    val difficulty: String = "medium",
+    val sourceModel: String? = null,
+    val generationPrompt: String? = null,
+    val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
+    val updatedAt: Long? = null
 )
 fun ChallengeTask.effectiveChallenges(): List<ChallengeActivity> {
     return if (challenges.isEmpty() && !codeExample.isNullOrBlank()) {

@@ -20,46 +20,42 @@ import com.dailydevchallenge.devstreaks.model.ProfileViewModel
 import com.dailydevchallenge.devstreaks.model.UserInfoViewModel
 import com.dailydevchallenge.devstreaks.repository.ResumeAnalysisRepository
 import com.dailydevchallenge.devstreaks.repository.InterviewRepository
-import com.dailydevchallenge.devstreaks.service.AdaptiveIntelligenceOrchestrator
-import com.dailydevchallenge.devstreaks.service.DifficultyCalculator
-import com.dailydevchallenge.devstreaks.service.WeakAreaDetectionService
-import com.dailydevchallenge.devstreaks.service.PersonalizedAICoachingService
-import com.dailydevchallenge.devstreaks.service.RealTimeWeakAreaMonitoringService
+import com.dailydevchallenge.devstreaks.features.social.SocialViewModel
+import com.dailydevchallenge.devstreaks.features.skilltree.SkillTreeViewModel
+import com.dailydevchallenge.devstreaks.features.projects.ProjectViewModel
+import com.dailydevchallenge.devstreaks.features.auth.LoginViewModel
+import com.dailydevchallenge.devstreaks.features.analytics.PredictiveInsightsViewModel
 import org.koin.dsl.module
 
 val viewModelModule = module {
-    // Core AI Services
+    // Core AI Services - keep only AI-specific services here
     single { AIFeedbackService(get(), get()) }
-    single { UserStatsManager(get()) }
     single { AIContextManager() }
     single { UserContextManager(get(), get(), get(), get(), get(), get()) }
     single { UnifiedAICoachService(get(), get(), get(), get()) }
 
-    // Phase 2 Adaptive Intelligence Services
-    single { DifficultyCalculator() }
-    single { WeakAreaDetectionService(get()) }
-    single { PersonalizedAICoachingService(get(), get()) }
-    single { RealTimeWeakAreaMonitoringService(get()) }
-    single { AdaptiveIntelligenceOrchestrator(get(), get(), get(), get()) } // Fixed: 4 parameters
-
-    // Repositories
+    // Repositories - these should stay in ViewModelModule as they're used by ViewModels
     single { ResumeAnalysisRepository(get()) }
     single { InterviewRepository(get()) }
 
     // ViewModels - Updated to include adaptive features
     single { OnboardingViewModel(get(), get(), get(), get()) }
-    single { ChallengeDetailViewModel(get(), get(), get(), get(), get()) } // Updated with adaptive features
-    single { AdaptiveChallengeViewModel(get(), get(), get(),get()) } // New adaptive challenge
-    // ViewModel
-    single { HomeViewModel(get(), get(), get(), get(), get(),get()) }
+    single { ChallengeDetailViewModel(get(), get(), get(), get(), get()) }
+    single { AdaptiveChallengeViewModel(get(), get(), get(), get()) }
+    single { HomeViewModel(get(), get(), get(), get(), get(), get()) }
     single { DevChatViewModel(get(), get(), get(), get(), get()) }
-    single { PersonalizedDevChatViewModel(get(), get(), get(), get(),get(),get(),get(),get()) } //
-    // Enhanced
-    // personalized chat
+    single { PersonalizedDevChatViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     single { ProfileViewModel(repo = get()) }
     single { ResumeChatViewModel(get(), get(), get(), get(), get()) }
     single { LeaderboardViewModel(get()) }
     single { UserInfoViewModel(get()) }
     single { ProfileEditViewModel(get(), get()) }
     single { SubscriptionViewModel(get(), get()) }
+
+    // Missing ViewModels - Add all discovered ViewModels
+    single { SocialViewModel(get(), get()) }
+    single { SkillTreeViewModel(get(), get()) }
+    single { ProjectViewModel(get(), get()) }
+    single { LoginViewModel() }
+    single { PredictiveInsightsViewModel(get(), get()) }
 }

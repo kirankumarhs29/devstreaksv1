@@ -271,6 +271,55 @@ fun MainScaffold(
                 composable(Routes.ActivityFeed) {
                     ActivityFeedScreen(navController)
                 }
+
+                // Phase 3: Advanced Adaptive Learning Features - Connected to LLM-powered services
+                composable(Routes.SkillTree) {
+                    com.dailydevchallenge.devstreaks.features.skilltree.SkillTreeView(
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                composable(Routes.Projects) {
+                    com.dailydevchallenge.devstreaks.features.projects.ProjectsScreen(
+                        onNavigateToSkillTree = {
+                            navController.navigate(Routes.SkillTree)
+                        }
+                    )
+                }
+
+                composable(Routes.SocialDashboard) {
+                    com.dailydevchallenge.devstreaks.features.social.SocialDashboardScreen(
+                        onNavigateToSkillTree = {
+                            navController.navigate(Routes.SkillTree)
+                        },
+                        onNavigateToProjects = {
+                            navController.navigate(Routes.Projects)
+                        }
+                    )
+                }
+
+                composable(Routes.PredictiveInsights) {
+                    com.dailydevchallenge.devstreaks.features.analytics.PredictiveInsightsDashboard(
+                        onNavigateToSkillTree = {
+                            navController.navigate(Routes.SkillTree)
+                        },
+                        onNavigateToProjects = {
+                            navController.navigate(Routes.Projects)
+                        }
+                    )
+                }
+
+                composable(Routes.ProjectDetail) { backStackEntry ->
+                    val projectId = backStackEntry.arguments?.getString("projectId")
+                    projectId?.let { id ->
+                        com.dailydevchallenge.devstreaks.features.projects.ProjectDetailScreen(
+                            projectId = id,
+                            onNavigateBack = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                }
             }
         }
     }

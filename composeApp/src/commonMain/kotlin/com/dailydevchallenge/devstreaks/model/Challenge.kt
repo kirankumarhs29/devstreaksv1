@@ -33,6 +33,16 @@ data class FlashcardChallenge(
     val cards: List<Flashcard>
 ) : Challenge()
 
+@Serializable
+@SerialName("ADAPTIVE")
+data class AdaptiveChallenge(
+    val id: String,
+    val title: String,
+    val description: String,
+    val difficulty: String,
+    val pathId: String,
+    val userId: String
+) : Challenge()
 
 @Serializable
 data class QuizQuestion(

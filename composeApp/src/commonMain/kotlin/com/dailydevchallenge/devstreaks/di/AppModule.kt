@@ -50,47 +50,31 @@ val appModule = module {
     }
     single { get<ChallengeDatabase>().challengePathQueries }
     single { get<ChallengeDatabase>().resumeAnalysisQueries }
-    single { ChallengeRepository(get(),get(), get()) }
-    single<JournalRepository> { JournalRepositoryImpl(get()) }
-    single <MemoryRepository>{ MemoryRepositoryImpl(get()) }
-    single<ProfileRepository> { ProfileRepositoryImpl(get()) }
-
-    // Missing AI-related repositories
-    single { ResumeAnalysisRepository(get()) }
-    single { InterviewRepository(get()) }
-
+    single { get<ChallengeDatabase>().userProfileQueries }
     single<JournalQueries> {
         get<ChallengeDatabase>().journalQueries
     }
     single<ConversationMemoryQueries> { get<ChallengeDatabase>().conversationMemoryQueries }
-    single { get<ChallengeDatabase>().userProfileQueries }
 
     // Network + AI
     single { getHttpClient() }
     single<LLMService> { GeminiLLMService(get()) }
 
-    // AI Services (new unified architecture)
-    single { UserContextManager(get(), get(), get(), get(), get(), get()) }
+    // Core Repositories
+    single { ChallengeRepository(get(), get(), get()) }
+    single<JournalRepository> { JournalRepositoryImpl(get()) }
+    single<MemoryRepository> { MemoryRepositoryImpl(get()) }
+    single<ProfileRepository> { ProfileRepositoryImpl(get()) }
+    single { ResumeAnalysisRepository(get()) }
+    single { InterviewRepository(get()) }
+
+    // AI Services
+    single { AIContextManager() }
     single { AIFeedbackService(get(), get()) }
     single { UserStatsManager(get()) }
-    single { AIContextManager() }
+    single { UserContextManager(get(), get(), get(), get(), get(), get()) }
     single { UnifiedAICoachService(get(), get(), get(), get()) }
 
-    // Phase 2 Adaptive Intelligence Services - Core services need to be available globally
-    single { DifficultyCalculator() }
-    single { WeakAreaDetectionService(get()) }
-    single { PersonalizedAICoachingService(get(), get()) }
-    single { RealTimeWeakAreaMonitoringService(get()) }
-    single { AdaptiveIntelligenceOrchestrator(get(), get(), get(), get()) }
-
+    // Learning Profile Preferences (was commented out in SharedKoinModule)
     single { LearningProfilePreferences }
-
-    // ViewModels - Updated to use unified AI service
-    single { OnboardingViewModel(get(), get(), get(), get()) }
-    single { HomeViewModel(get(), get(), get(), get(), get() ,get()) }
-    single { DevChatViewModel(get(), get(), get(), get(), get()) }
-    single {ProfileViewModel(repo = get())}
-    single { ResumeChatViewModel(get(), get(), get(), get(), get()) }
-    single { LeaderboardViewModel(get())}
-
 }

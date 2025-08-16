@@ -54,6 +54,39 @@ data class UserPerformanceSummary(
     val consistencyScore: Double = 0.0,
     val timestamp: Long = Clock.System.now().toEpochMilliseconds()
 )
+data class UserPerformanceMetrics(
+    val totalChallenges: Int,
+    val averageScore: Double,
+    val averageTime: Long
+)
+data class ChallengeResult(
+    val challengeType: String,
+    val score: Double
+)
+data class PerformanceDataPoint(
+    val timestamp: Instant,
+    val score: Double,
+    val challengeCount: Int
+)
+
+data class SkillPerformanceData(
+    val skillArea: String,
+    val averageScore: Double,
+    val totalAttempts: Int,
+    val improvementRate: Double,
+    val lastPracticed: Instant
+)
+data class LearningPatterns(
+    val userId: String,
+    val averageSessionDuration: Long,
+    val peakPerformanceHours: List<String>,
+    val preferredDifficulty: DifficultyLevel,
+    val strengths: List<String>,
+    val consistencyScore: Double,
+    val learningVelocity: Double,
+    val retentionRate: Double,
+    val createdAt: Instant
+)
 
 /**
  * Difficulty adjustment recommendation
@@ -87,7 +120,9 @@ enum class InsightType {
     ERROR_PATTERN,
     IMPROVEMENT_DETECTED,
     INCONSISTENCY,
-    LEARNING_PLATEAU
+    LEARNING_PLATEAU,
+    STUCK_PATTERN,
+    HINT_AVOIDANCE
 }
 
 /**

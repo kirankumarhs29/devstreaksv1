@@ -100,6 +100,8 @@ class AIFeedbackService(
             is CodeChallenge -> "coding"
             is QuizChallenge -> "quiz"
             is FlashcardChallenge -> "flashcard"
+            is AdaptiveChallenge -> "adaptive"
+            else -> "unknown"
         }
 
         val timeContext = completionTime?.let {
@@ -167,6 +169,8 @@ class AIFeedbackService(
             is CodeChallenge -> "Title: ${challenge.title}, Description: ${challenge.description}"
             is QuizChallenge -> "Title: ${challenge.title}, Questions: ${challenge.questions.size}"
             is FlashcardChallenge -> "Title: ${challenge.title}, Cards: ${challenge.cards.size}"
+            is AdaptiveChallenge -> "Title: ${challenge.title}, Difficulty: ${challenge.difficulty}"
+            else -> "Unknown challenge type"
         }
     }
 

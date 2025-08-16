@@ -40,4 +40,12 @@ object Routes {
     const val Friends = "friends"
     const val AIHub = "aihub"
     const val ActivityFeed = "activity_feed"
+
+    // Phase 3: Advanced Adaptive Learning Features
+    const val SkillTree = "skill_tree"
+    const val Projects = "projects"
+    const val SocialDashboard = "social_dashboard"
+    const val PredictiveInsights = "predictive_insights"
+    const val ProjectDetail = "project_detail/{projectId}"
+    fun projectDetailRoute(projectId: String) = "project_detail/$projectId"
 }

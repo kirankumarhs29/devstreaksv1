@@ -23,10 +23,14 @@ import com.dailydevchallenge.devstreaks.model.QAHistory
 import com.dailydevchallenge.devstreaks.model.RemoteInterviewStepResult
 import com.dailydevchallenge.devstreaks.model.StepInterviewPayload
 import com.dailydevchallenge.devstreaks.model.StartInterviewPayload
+import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
 import com.dailydevchallenge.devstreaks.utils.generateUUID
 import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
 import com.dailydevchallenge.devstreaks.settings.UserPreferences
+import org.koin.compose.getKoin
+import org.koin.compose.koinInject
+import org.koin.core.Koin
 
 
 private val jsonFormatter = Json {
@@ -101,7 +105,7 @@ class GeminiLLMService(
             if (jsonResponse.containsKey("error")) {
                 val errorMessage = jsonResponse["error"]?.jsonPrimitive?.content ?: "Unknown error"
                 logger.e("Gemini API returned error: $errorMessage")
-                throw Exception("Gemini API error: $errorMessage")
+//                return createFallbackChallengeResponse(goal, skills, days, requestId)
             }
 
             // Parse as ChallengePathResponse if no error
@@ -109,7 +113,7 @@ class GeminiLLMService(
         } catch (e: Exception) {
             logger.e("Failed to parse Gemini plan response", e)
             // Return a fallback response instead of throwing
-            createFallbackChallengeResponse(goal, skills, days, requestId)
+            createFallbackChallengeResponse(goal, skills, days, requestId)!!
         }
     }
 
@@ -462,55 +466,43 @@ class GeminiLLMService(
     }
 
     // Fallback method to create a basic challenge response when API fails
-    private fun createFallbackChallengeResponse(
+    private suspend fun createFallbackChallengeResponse(
         goal: String,
         skills: List<String>,
         days: Int,
         requestId: String
-    ): ChallengePathResponse {
-        val fallbackTasks = (1..minOf(days, 7)).map { dayNumber ->
-            ChallengeTask(
-                id = "fallback-day-$dayNumber",
-                pathId = requestId,
-                day = dayNumber,
-                title = "Day $dayNumber: $goal Fundamentals",
-                type = goal,
-                content = "Learn the basics of $goal on day $dayNumber. This is a fallback lesson while we work on getting the full AI-generated content.",
-                xp = 50,
-                checklist = listOf(
-                    "Complete the reading material",
-                    "Try the practice exercises",
-                    "Review key concepts"
-                ),
-                whyItMatters = "Building strong fundamentals in $goal is essential for your learning journey.",
-                tip = "Take your time and practice regularly for best results!",
-                challenges = listOf(
-                    ChallengeActivity(
-                        id = "fallback-quiz-$dayNumber",
-                        type = ActivityType.QUIZ,
-                        prompt = "Test your understanding of $goal basics from day $dayNumber",
-                        options = listOf(
-                            "Option A: Basic concept",
-                            "Option B: Intermediate concept",
-                            "Option C: Advanced concept",
-                            "Option D: Expert concept"
-                        ),
-                        correctAnswer = "Option A: Basic concept",
-                        explanation = "This covers the fundamental concepts you need to master."
-                    ),
-                    ChallengeActivity(
-                        id = "fallback-flashcard-$dayNumber",
-                        type = ActivityType.FLASHCARD,
-                        prompt = "Review key $goal terms and definitions",
-                        explanation = "Flashcards help reinforce important concepts through spaced repetition."
+    ): ChallengePathResponse? {
+        // Instead of hardcoded content, try to reuse existing content from database
+        return try {
+            val repository: ChallengeRepository = Koin().get<ChallengeRepository>()
+            
+            // Check for existing similar content first
+            val existingContent = repository.getReusableContentBySkill(goal)
+            if (existingContent.isNotEmpty()) {
+                logger.d("GeminiLLMService", "Reusing existing content for $goal")
+                
+                val reusedTasks = existingContent.take(minOf(days, existingContent.size)).mapIndexed { index, (task, activities) ->
+                    task.copy(
+                        id = "reused-${task.id}-$index",
+                        pathId = requestId,
+                        day = index + 1,
+                        challenges = activities
                     )
+                }
+                
+                return ChallengePathResponse(
+                    track = "$goal Learning Path (Curated)",
+                    days = reusedTasks
                 )
-            )
+            }
+            
+            // If no existing content, return null to trigger retry or empty state
+            logger.w("GeminiLLMService", "No fallback content available for $goal")
+            null
+            
+        } catch (e: Exception) {
+            logger.e("GeminiLLMService", e, "Error creating fallback response")
+            null
         }
-
-        return ChallengePathResponse(
-            track = "Basic $goal Learning Path (Fallback)",
-            days = fallbackTasks
-        )
     }
 }

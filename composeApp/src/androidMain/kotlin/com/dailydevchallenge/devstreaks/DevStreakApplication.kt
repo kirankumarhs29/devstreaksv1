@@ -32,7 +32,9 @@ class DevStreakApplication : Application() {
                 databaseModule,
                 repositoryModule,
                 llmModule,
+                serviceModule,  // Add the missing ServiceModule
                 viewModelModule,
+                sharedModule    // Add the SharedModule
             )
         }
     }

@@ -3,6 +3,12 @@ package com.dailydevchallenge.devstreaks
 import androidx.compose.ui.window.ComposeUIViewController
 import com.dailydevchallenge.devstreaks.di.appModule
 import com.dailydevchallenge.devstreaks.di.iosModule
+import com.dailydevchallenge.devstreaks.di.databaseModule
+import com.dailydevchallenge.devstreaks.di.repositoryModule
+import com.dailydevchallenge.devstreaks.di.serviceModule
+import com.dailydevchallenge.devstreaks.di.viewModelModule
+import com.dailydevchallenge.devstreaks.di.sharedModule
+import com.dailydevchallenge.devstreaks.llm.llmModule
 import org.koin.compose.KoinContext
 import org.koin.core.context.startKoin
 import platform.UserNotifications.UNAuthorizationOptionAlert
@@ -29,8 +35,16 @@ fun MainViewController() = ComposeUIViewController {
         if (!koinStarted) {
         startKoin {
             printLogger()
-//            initKoin()
-            modules(iosModule, appModule) // Make sure `appModule` exists in shared code
+            modules(
+                iosModule,
+                appModule,
+                databaseModule,
+                repositoryModule,
+                llmModule,
+                serviceModule,
+                viewModelModule,
+                sharedModule
+            )
         }
             koinStarted = true
         }
@@ -47,7 +61,3 @@ private fun requestNotificationPermission() {
     )
     center.delegate = null // Optional: if you want to handle foreground notifications later
 }
-
-
-
-

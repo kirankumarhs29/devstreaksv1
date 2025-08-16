@@ -69,7 +69,10 @@ SELECT * FROM UserChallengeProgress WHERE userId = ? AND challengeId = ?;
 
 
 selectAllUserProgress:
-SELECT * FROM UserProgress;
+SELECT UserProgress.*, UserChallengeProgress.score
+FROM UserProgress
+LEFT JOIN UserChallengeProgress
+ON UserProgress.completedTaskId = UserChallengeProgress.challengeId;
 
 
 selectProfile:
@@ -109,3 +112,6 @@ WHERE userId = ?;
 
 getUserById:
 SELECT * FROM Users WHERE userId = ?;
+
+updateUserXP:
+UPDATE Users SET xp = ? WHERE userId = ?;

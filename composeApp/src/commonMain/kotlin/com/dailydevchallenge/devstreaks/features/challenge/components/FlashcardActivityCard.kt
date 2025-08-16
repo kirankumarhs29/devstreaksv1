@@ -20,7 +20,9 @@ fun FlashcardActivityCard(activity: ChallengeActivity, onComplete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clickable { showBack = !showBack },
+            .clickable { 
+                showBack = !showBack
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -29,11 +31,9 @@ fun FlashcardActivityCard(activity: ChallengeActivity, onComplete: () -> Unit) {
                 Text("📚 Flashcard", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(8.dp))
                 AnimatedVisibility(!showBack) {
-                    playSuccessSound("correct")
                     Text(activity.prompt, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 }
                 AnimatedVisibility(showBack) {
-                    playSuccessSound("correct")
                     Text(activity.explanation ?: "No explanation provided.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(12.dp))

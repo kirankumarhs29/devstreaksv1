@@ -129,6 +129,8 @@ class UnifiedAICoachService(
             is CodeChallenge -> challenge.title
             is QuizChallenge -> challenge.title
             is FlashcardChallenge -> challenge.title
+            is AdaptiveChallenge -> challenge.title
+            else -> "Unknown Challenge"
         }
     }
 

@@ -32,7 +32,12 @@ data class UserAdaptiveContext(
     val weakAreas: List<WeakArea>,
     val recentChallenges: List<ChallengeTask>,
     @Contextual val learningProfile: com.dailydevchallenge.devstreaks.features.onboarding.LearningProfile?,
-    val timestamp: Long = Clock.System.now().toEpochMilliseconds()
+    val timestamp: Long = Clock.System.now().toEpochMilliseconds(),
+    // Add missing fields referenced by AdaptiveIntelligenceOrchestrator
+    val learningStreak: Int = 0,
+    val recentPerformance: UserPerformanceSummary = performanceSummary,
+    val topWeakAreas: List<WeakArea> = weakAreas,
+    val currentDifficultyLevel: DifficultyLevel = DifficultyLevel.MEDIUM
 )
 
 @Serializable
@@ -78,7 +83,11 @@ data class SessionPerformanceAnalysis(
     val timeEfficiency: Double, // Compared to expected time
     val errorPattern: String,
     val strugglingAreas: List<String>,
-    val overallProgress: Double
+    val overallProgress: Double,
+    // Added fields to align with orchestrator usage
+    val errorCount: Int = 0,
+    val hintsUsed: Int = 0,
+    val stuckDuration: Long = 0L
 )
 
 @Serializable
@@ -105,7 +114,10 @@ enum class InterventionType {
     DIFFICULTY_ADJUSTMENT,
     BREAK_REMINDER,
     STRATEGY_GUIDANCE,
-    WEAK_AREA_FOCUS
+    WEAK_AREA_FOCUS,
+    PROGRESS_CHECK,
+    CONCEPT_REVIEW,
+    BREAK_SUGGESTION
 }
 
 @Serializable
@@ -122,7 +134,10 @@ enum class HintRecommendation {
     GENTLE_NUDGE,
     SPECIFIC_HINT,
     STRATEGIC_GUIDANCE,
-    DIRECT_HELP
+    DIRECT_HELP,
+    IMMEDIATE,
+    SUGGESTED,
+    AVAILABLE
 }
 
 @Serializable

@@ -127,6 +127,16 @@ CREATE TABLE CoachingContext (
     contextSummary TEXT NOT NULL,
     lastUpdated INTEGER NOT NULL
 );
+-- insertEngagement:
+-- INSERT INTO EngagementRecords(id, userId, taskId, startTime, endTime, durationMs, timestamp)
+-- VALUES (?, ?, ?, ?, ?, ?, ?);
+
+insertMetrics:
+INSERT INTO PerformanceMetrics(id, userId, taskId, startTime, endTime, durationMillis, attempts, hintsUsed, completed, errorCount, difficultyLevel, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectMetricsByUser:
+SELECT * FROM PerformanceMetrics WHERE userId = ?;
 
 
 -- -- Insert progress
@@ -235,14 +245,17 @@ SELECT id, track FROM ChallengePath WHERE id = ?;
 insertCompletedChallenge:
 INSERT INTO CompletedChallenge(pathId, completedDate) VALUES (?, ?);
 
--- 👇 Add this
+
 insertTaskReflection:
 INSERT INTO TaskReflection(id, taskId, reflection, timestamp)
 VALUES (?, ?, ?, ?);
 
--- 👇 Add this
 selectAllCompletedChallenges:
 SELECT * FROM CompletedChallenge;
+
+selectAllCompleted:
+SELECT pathId FROM CompletedChallenge;
+
 
 -- 👇 Add this
 selectAllReflections:
@@ -436,7 +449,27 @@ CREATE TABLE SkillMasteryLevel (
     UNIQUE(userId, skillArea)
 );
 
--- NEW: Advanced Weak Area Prioritization Queries
+-- NEW: Adaptive Challenges Table
+
+CREATE TABLE AdaptiveChallenge (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    pathId TEXT NOT NULL,
+    userId TEXT NOT NULL
+);
+
+-- Queries for Adaptive Challenges
+
+insertAdaptiveChallenge:
+INSERT INTO AdaptiveChallenge(id, title, description, difficulty, pathId, userId)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAdaptiveChallengesByUser:
+SELECT * FROM AdaptiveChallenge WHERE userId = ?;
+
+-- Advanced Weak Area Prioritization Queries
 
 -- Insert prioritized weak area
 insertPrioritizedWeakArea:
@@ -537,3 +570,50 @@ selectSkillMasteryLevels:
 SELECT * FROM SkillMasteryLevel
 WHERE userId = ?
 ORDER BY currentLevel DESC, progressToNext DESC;
+
+-- ✅ CONTENT REUSE QUERIES - Check existing content before AI generation
+
+-- Check if challenge path exists for specific criteria
+checkExistingChallengePath:
+SELECT id, track FROM ChallengePath 
+WHERE track LIKE '%' || ? || '%'
+LIMIT 1;
+
+-- Find similar tasks by type and content keywords
+findSimilarTasks:
+SELECT id, title, content, type FROM ChallengeTask 
+WHERE type = ? AND (
+    title LIKE '%' || ? || '%' OR 
+    content LIKE '%' || ? || '%'
+)
+LIMIT 5;
+
+-- Check if specific challenge activity exists
+checkExistingActivity:
+SELECT id, prompt, type FROM ChallengeActivity
+WHERE type = ? AND prompt LIKE '%' || ? || '%'
+LIMIT 3;
+
+-- Get reusable content by skill area
+getReusableContentBySkill:
+SELECT ct.id, ct.title, ct.content, ct.type, ca.prompt, ca.type AS "activityType"
+FROM ChallengeTask ct
+LEFT JOIN ChallengeActivity ca ON ct.id = ca.taskId
+WHERE ct.content LIKE '%' || ? || '%' OR ct.title LIKE '%' || ? || '%'
+ORDER BY ct.id DESC
+LIMIT 10;
+
+-- Check content freshness (avoid regenerating recent content)
+checkRecentContent:
+SELECT COUNT(*) AS count FROM ChallengeTask ct
+JOIN ChallengePath cp ON ct.pathId = cp.id
+WHERE cp.track LIKE '%' || ? || '%' 
+AND datetime('now', '-7 days') < datetime(substr(ct.id, 1, 8), 'unixepoch');
+
+-- Find content gaps for recommendation
+findContentGaps:
+SELECT DISTINCT type, COUNT(*) AS count
+FROM ChallengeTask 
+GROUP BY type 
+HAVING count < ?
+ORDER BY count ASC;
