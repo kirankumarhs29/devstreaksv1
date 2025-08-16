@@ -18,7 +18,6 @@ val databaseModule = module {
     }
     single<ConversationMemoryQueries> { get<ChallengeDatabase>().conversationMemoryQueries }
     single { get<ChallengeDatabase>().userProfileQueries }
-
-
+    single { get<ChallengeDatabase>().resumeAnalysisQueries }
 
 }

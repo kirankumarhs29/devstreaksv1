@@ -1,5 +1,6 @@
 [versions]
 accompanistPager = "0.34.0"
+accompanistPermissions = "0.37.3"
 agp = "8.8.0"
 android-compileSdk = "35"
 android-minSdk = "25"
@@ -14,9 +15,12 @@ androidx-espresso = "3.6.1"
 androidx-lifecycle = "2.9.0"
 androidx-testExt = "1.2.1"
 androidxNavigationCompose = "2.7.7"
+annotation = "1.9.1"
 calfFilePicker = "0.8.0"
 composeMultiplatform = "1.8.1"
 composeNavigation = "1.0.0-alpha04"
+compottie = "2.0.0"
+compottieVersion = "2.0.0-rc04"
 coreSplashscreen = "1.0.1"
 coroutinesExtensions = "2.0.2"
 datastorePreferences = "1.1.7"
@@ -35,7 +39,9 @@ ktorClientContentNegotiation = "2.3.12"
 ktorClientCore = "2.3.12"
 ktorClientDarwin = "2.3.12"
 ktorSerializationKotlinxJson = "2.3.12"
+lifecycleRuntimeCompose = "2.9.2"
 lottieCompose = "6.3.0"
+lottieComposeVersion = "6.0.0"
 markdown = "0.3.1"
 material = "1.8.2"
 material3 = "1.3.2"
@@ -96,22 +102,38 @@ playServicesMeasurementApi = "22.5.0"
 activityKtx = "1.10.1"
 firebaseMessagingKtx = "24.1.2"
 firebaseCrashlyticsKtx = "19.4.4"
+annotationJvm = "1.9.1"
+runtimeJvmstubs = "1.8.3"
+uiGraphicsDesktop = "1.7.0"
+kamel = "0.9.5"
+androidxFoundationAndroid = "1.9.0"
+lifecycleRuntimeComposeAndroid = "2.9.2"
 
 
 [libraries]
 
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPager" }
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
+airbnb-lottie-compose = { module = "com.airbnb.lottie:lottie-compose", version.ref = "lottieComposeVersion" }
+alexzhirkevich-compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottieVersion" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" }
 androidx-material = { module = "androidx.compose.material:material", version.ref = "material" }
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 calf-file-picker = { module = "com.mohamedrejeb.calf:calf-file-picker", version.ref = "calfFilePicker" }
+calf-ui = { module = "com.mohamedrejeb.calf:calf-ui", version.ref = "calfFilePicker" }
+calf-webview = { module = "com.mohamedrejeb.calf:calf-webview", version.ref = "calfFilePicker" }
 com-google-firebase-firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 compose-navigation = { module = "io.github.xxfast:compose-navigation", version.ref = "composeNavigation" }
+compottie = { module = "dev.romainguy.compottie:compottie", version.ref = "compottie" }
+compottie-dot = { module = "io.github.alexzhirkevich:compottie-dot", version.ref = "compottieVersion" }
+compottie-network = { module = "io.github.alexzhirkevich:compottie-network", version.ref = "compottieVersion" }
 coroutines-extensions = { module = "com.squareup.sqldelight:coroutines-extensions", version.ref = "runtime" }
 coroutines-extensions-v202 = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "coroutinesExtensions" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
@@ -126,7 +148,6 @@ foundation-layout = { module = "org.jetbrains.compose.foundation:foundation-layo
 google-firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx" }
 google-firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx" }
 google-firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
-kamel-image = { module = "com.alialbaali.kamel:kamel-image", version.ref = "kamelImage" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -137,7 +158,6 @@ androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "a
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
-androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "dateTime" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientContentNegotiation" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktorClientContentNegotiation" }
@@ -211,6 +231,13 @@ play-services-measurement-api = { group = "com.google.android.gms", name = "play
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 google-firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
+androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
+androidx-runtime-jvmstubs = { group = "androidx.compose.runtime", name = "runtime-jvmstubs", version.ref = "runtimeJvmstubs" }
+androidx-ui-graphics-desktop = { group = "androidx.compose.ui", name = "ui-graphics-desktop", version.ref = "uiGraphicsDesktop" }
+firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx" }
+kamel-image = { module = "media.kamel:kamel-image", version.ref = "kamel" }
+androidx-compose-foundation-foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "androidxFoundationAndroid" }
+androidx-lifecycle-runtime-compose-android = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose-android", version.ref = "lifecycleRuntimeComposeAndroid" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

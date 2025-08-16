@@ -9,7 +9,7 @@ object Routes {
     // forget password
     const val ForgotPassword = "forgot_password"
     const val LearningIntent = "learning_intent"
-//    const val ChallengeLoading = "challenge_loading"
+    const val InterviewHome = "interview_home"
 
     const val MainScaffold = "main_scaffold"
     const val HomeScreen = "home"
@@ -23,6 +23,7 @@ object Routes {
     const val clearDevChat = "conversation_history"
     const val editProfile = "edit_profile"
     const val ResumeAnalysis = "resumeAnalysis"
+    const val Pomodoro = "pomodoro"
 
 //    const val PathDetail = "path_detail/{pathId}"
 //    fun pathDetailRoute(pathId: String) = "path_detail/$pathId"
@@ -33,4 +34,18 @@ object Routes {
 //    const val ChallengeDetail = "challenge_detail/{challengeId}"
 //    fun challengeDetailRoute(challengeId: String) = "challenge_detail/$challengeId"
 
+    // New Firebase-powered features
+    const val Leaderboard = "leaderboard"
+    const val Subscription = "subscription"
+    const val Friends = "friends"
+    const val AIHub = "aihub"
+    const val ActivityFeed = "activity_feed"
+
+    // Phase 3: Advanced Adaptive Learning Features
+    const val SkillTree = "skill_tree"
+    const val Projects = "projects"
+    const val SocialDashboard = "social_dashboard"
+    const val PredictiveInsights = "predictive_insights"
+    const val ProjectDetail = "project_detail/{projectId}"
+    fun projectDetailRoute(projectId: String) = "project_detail/$projectId"
 }

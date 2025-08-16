@@ -16,6 +16,7 @@ import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.features.navigation.DevStreakTopBar
 import com.dailydevchallenge.devstreaks.features.routes.Routes
+import com.dailydevchallenge.devstreaks.theme.extendedColors
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -121,7 +122,7 @@ fun ChallengeDayCard(day: ChallengeTask) {
                     onClick = {},
                     label = { Text("⭐ XP: ${day.xp}") },
                     enabled = false,
-                    colors = AssistChipDefaults.assistChipColors(containerColor = Color(0xFFFFF9C4))
+                    colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.extendedColors.warningContainer)
                 )
                 Spacer(Modifier.width(8.dp))
                 AssistChip(

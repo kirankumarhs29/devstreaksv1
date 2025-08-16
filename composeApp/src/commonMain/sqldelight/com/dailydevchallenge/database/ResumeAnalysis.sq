@@ -1,0 +1,147 @@
+-- ResumeAnalysis.sq
+CREATE TABLE ResumeAnalysis (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    resumeText TEXT NOT NULL,
+    summary TEXT,
+    skillsParsed TEXT,
+    skillsGaps TEXT,
+    jobMatchScore INTEGER,
+    recommendations TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+-- InterviewSession.sq
+CREATE TABLE InterviewSession (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    resumeAnalysisId TEXT NOT NULL REFERENCES ResumeAnalysis(id),
+    sessionDate INTEGER NOT NULL,
+    summary TEXT
+);
+
+-- InterviewQuestion.sq
+CREATE TABLE InterviewQuestion (
+    id TEXT NOT NULL PRIMARY KEY,
+    questionText TEXT NOT NULL,
+    topic TEXT,
+    difficulty INTEGER,
+    followUp TEXT,
+    lastAskedAt INTEGER,
+    timesAsked INTEGER DEFAULT 0
+);
+
+-- UserAnswer.sq
+CREATE TABLE UserAnswer (
+    id TEXT NOT NULL PRIMARY KEY,
+    questionId TEXT NOT NULL REFERENCES InterviewQuestion(id),
+    sessionId TEXT NOT NULL REFERENCES InterviewSession(id),
+    answerText TEXT NOT NULL,
+    feedback TEXT,
+    score INTEGER,
+    topic TEXT,
+    timestamp INTEGER NOT NULL
+);
+
+
+
+-- Insert
+insertResumeAnalysis:
+INSERT INTO ResumeAnalysis(id, userId, resumeText, summary, skillsParsed, skillsGaps, jobMatchScore,
+recommendations, createdAt)
+VALUES (?, ?, ?, ?,?, ?, ?,?, ?);
+
+-- Select all for user
+selectResumeAnalysesForUser:
+SELECT * FROM ResumeAnalysis WHERE userId = ? ORDER BY createdAt DESC;
+
+selectResumeAnalysisById:
+SELECT * FROM ResumeAnalysis WHERE id = ?;
+
+-- Insert a new session
+insertInterviewSession:
+INSERT INTO InterviewSession(id, userId, resumeAnalysisId, sessionDate, summary)
+VALUES (?, ?, ?, ?, ?);
+
+-- Select all sessions for a user (most recent first)
+selectInterviewSessionsForUser:
+SELECT * FROM InterviewSession
+WHERE userId = ?
+ORDER BY sessionDate DESC;
+
+-- Select a session by ID
+selectInterviewSessionById:
+SELECT * FROM InterviewSession
+WHERE id = ?;
+
+-- Delete a session by ID
+deleteInterviewSessionById:
+DELETE FROM InterviewSession
+WHERE id = ?;
+
+-- Insert a new interview question
+insertInterviewQuestion:
+INSERT INTO InterviewQuestion(id, questionText, topic, difficulty, followUp,lastAskedAt, timesAsked)
+VALUES (?, ?, ?, ?, ?,?, ?);
+
+
+-- Select all questions
+selectAllInterviewQuestions:
+SELECT * FROM InterviewQuestion;
+
+-- Select questions by topic
+selectQuestionsByTopic:
+SELECT * FROM InterviewQuestion
+WHERE topic = ?
+ORDER BY timesAsked ASC, lastAskedAt ASC
+LIMIT ?;
+
+-- Update question usage tracking
+updateQuestionStats:
+UPDATE InterviewQuestion
+SET lastAskedAt = ?, timesAsked = timesAsked + 1
+WHERE id = ?;
+
+-- Get unasked or least-asked questions (adaptive/avoid repetition)
+selectLeastAskedQuestions:
+SELECT * FROM InterviewQuestion
+ORDER BY timesAsked ASC, lastAskedAt ASC
+LIMIT ?;
+
+-- Insert a user answer
+insertUserAnswer:
+INSERT INTO UserAnswer(id, questionId, sessionId, answerText, feedback, score,topic, timestamp)
+VALUES (?, ?, ?, ?, ?, ?,?, ?);
+
+-- Select answers for a session (for review)
+selectUserAnswersBySession:
+SELECT * FROM UserAnswer
+WHERE sessionId = ?
+ORDER BY timestamp ASC;
+
+-- Select all answers for a user (via session joining, for analytics)
+selectUserAnswersForUser:
+SELECT ua.* FROM UserAnswer AS ua
+INNER JOIN InterviewSession AS s ON ua.sessionId = s.id
+WHERE s.userId = ?
+ORDER BY ua.timestamp DESC;
+
+-- Select answers for a question (for adaptivity)
+selectAnswersForQuestion:
+SELECT * FROM UserAnswer
+WHERE questionId = ?
+ORDER BY timestamp DESC;
+
+-- Delete all answers for a session (if user resets)
+deleteAnswersBySessionId:
+DELETE FROM UserAnswer
+WHERE sessionId = ?;
+
+updateFeedbackForAnswer:
+UPDATE UserAnswer SET feedback = ? WHERE questionId = ? AND sessionId = ?;
+
+-- In UserAnswer.sq
+selectQuestionIdsByUser:
+SELECT DISTINCT ua.questionId FROM UserAnswer ua
+INNER JOIN InterviewSession s ON ua.sessionId = s.id
+WHERE s.userId = ?;

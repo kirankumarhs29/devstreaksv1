@@ -37,12 +37,15 @@ CREATE TABLE ChallengeActivity (
     videoUrl TEXT
 );
 
--- CREATE TABLE UserProgress (
---     id TEXT PRIMARY KEY,
---     userId TEXT NOT NULL, -- ✅ Add this line
---     completedTaskId TEXT,
---     completedDate TEXT
--- );
+CREATE TABLE userEngagement (
+    id TEXT PRIMARY KEY,
+    taskId TEXT,
+    userId TEXT,
+    startTime INTEGER,
+    endTime INTEGER,
+    durationMillis INTEGER
+);
+
 
 CREATE TABLE UserStats (
     id TEXT PRIMARY KEY,
@@ -70,6 +73,71 @@ CREATE TABLE TaskReflection (
     timestamp TEXT NOT NULL
 );
 
+-- NEW: Performance Metrics table for Dynamic Difficulty Adjustment
+CREATE TABLE PerformanceMetrics (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    taskId TEXT NOT NULL,
+    startTime INTEGER NOT NULL,
+    endTime INTEGER NOT NULL,
+    durationMillis INTEGER NOT NULL,
+    attempts INTEGER NOT NULL,
+    hintsUsed INTEGER NOT NULL,
+    completed INTEGER NOT NULL, -- 0 = false, 1 = true
+    errorCount INTEGER NOT NULL,
+    difficultyLevel INTEGER NOT NULL, -- 1-5 corresponding to DifficultyLevel enum
+    timestamp INTEGER NOT NULL
+);
+
+-- NEW: User Performance Summary cache table
+CREATE TABLE UserPerformanceSummary (
+    userId TEXT PRIMARY KEY,
+    averageCompletionTime INTEGER NOT NULL,
+    successRate REAL NOT NULL,
+    averageAttempts REAL NOT NULL,
+    averageHintsUsed REAL NOT NULL,
+    averageErrorCount REAL NOT NULL,
+    currentDifficultyLevel INTEGER NOT NULL,
+    recentTaskCount INTEGER NOT NULL,
+    lastUpdated INTEGER NOT NULL
+);
+
+-- NEW: Weak Areas Detection table
+CREATE TABLE WeakArea (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    skillArea TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severityScore REAL NOT NULL,
+    frequencyCount INTEGER NOT NULL,
+    lastEncountered INTEGER NOT NULL,
+    averageAttempts REAL NOT NULL,
+    averageTimeSpent INTEGER NOT NULL,
+    commonErrors TEXT NOT NULL, -- JSON array as text
+    improvementTrend TEXT NOT NULL,
+    confidenceLevel REAL NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+-- NEW: Personalized Coaching Context cache
+CREATE TABLE CoachingContext (
+    userId TEXT PRIMARY KEY,
+    motivationalState TEXT NOT NULL,
+    preferredCoachingStyle TEXT NOT NULL,
+    contextSummary TEXT NOT NULL,
+    lastUpdated INTEGER NOT NULL
+);
+-- insertEngagement:
+-- INSERT INTO EngagementRecords(id, userId, taskId, startTime, endTime, durationMs, timestamp)
+-- VALUES (?, ?, ?, ?, ?, ?, ?);
+
+insertMetrics:
+INSERT INTO PerformanceMetrics(id, userId, taskId, startTime, endTime, durationMillis, attempts, hintsUsed, completed, errorCount, difficultyLevel, timestamp)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectMetricsByUser:
+SELECT * FROM PerformanceMetrics WHERE userId = ?;
+
 
 -- -- Insert progress
 -- -- Insert a completed task record
@@ -85,6 +153,14 @@ CREATE TABLE TaskReflection (
 insertOrReplaceUserStats:
 INSERT OR REPLACE INTO UserStats(id, xp, streak, lastCompletedDate)
 VALUES (?, ?, ?, ?);
+
+insertEngagement:
+INSERT INTO userEngagement(id, taskId, userId, startTime, endTime, durationMillis)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAllEngagements:
+SELECT * FROM userEngagement;
+
 
 -- Get current stats
 selectUserStats:
@@ -169,23 +245,375 @@ SELECT id, track FROM ChallengePath WHERE id = ?;
 insertCompletedChallenge:
 INSERT INTO CompletedChallenge(pathId, completedDate) VALUES (?, ?);
 
--- 👇 Add this
+
 insertTaskReflection:
 INSERT INTO TaskReflection(id, taskId, reflection, timestamp)
 VALUES (?, ?, ?, ?);
 
--- 👇 Add this
 selectAllCompletedChallenges:
 SELECT * FROM CompletedChallenge;
+
+selectAllCompleted:
+SELECT pathId FROM CompletedChallenge;
+
 
 -- 👇 Add this
 selectAllReflections:
 SELECT * FROM TaskReflection;
 
+-- NEW: Performance Metrics Queries for Dynamic Difficulty Adjustment
 
+-- Insert performance metrics
+insertPerformanceMetrics:
+INSERT INTO PerformanceMetrics(
+    id, userId, taskId, startTime, endTime, durationMillis,
+    attempts, hintsUsed, completed, errorCount, difficultyLevel, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+-- Get recent performance metrics for a user (for difficulty calculation)
+selectRecentPerformanceMetrics:
+SELECT * FROM PerformanceMetrics
+WHERE userId = ?
+ORDER BY timestamp DESC
+LIMIT ?;
 
+-- Get performance metrics for a specific task
+selectPerformanceByTask:
+SELECT * FROM PerformanceMetrics
+WHERE taskId = ? AND userId = ?;
 
+-- Update or insert user performance summary
+insertOrReplaceUserPerformanceSummary:
+INSERT OR REPLACE INTO UserPerformanceSummary(
+    userId, averageCompletionTime, successRate, averageAttempts,
+    averageHintsUsed, averageErrorCount, currentDifficultyLevel,
+    recentTaskCount, lastUpdated
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+-- Get user performance summary
+selectUserPerformanceSummary:
+SELECT * FROM UserPerformanceSummary WHERE userId = ?;
 
+-- Get average performance by difficulty level (for baseline calculations)
+selectAveragePerformanceByDifficulty:
+SELECT
+    difficultyLevel,
+    AVG(durationMillis) AS avgDuration,
+    AVG(CAST(completed AS REAL)) AS success_rate,
+    AVG(attempts) AS avgAttempts,
+    AVG(hintsUsed) AS avgHints,
+    AVG(errorCount) AS avgErrors,
+    COUNT(*) AS sampleCount
+FROM PerformanceMetrics
+WHERE difficultyLevel = ?
+GROUP BY difficultyLevel;
 
+-- NEW: Weak Areas and Coaching Context Queries
+
+-- Insert or update weak area
+insertOrReplaceWeakArea:
+INSERT OR REPLACE INTO WeakArea(
+    id, userId, skillArea, category, severityScore, frequencyCount,
+    lastEncountered, averageAttempts, averageTimeSpent, commonErrors,
+    improvementTrend, confidenceLevel, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get weak areas for user
+selectWeakAreasByUser:
+SELECT * FROM WeakArea
+WHERE userId = ?
+ORDER BY severityScore DESC, lastEncountered DESC;
+
+-- Get specific weak area
+selectWeakAreaBySkill:
+SELECT * FROM WeakArea
+WHERE userId = ? AND skillArea = ?;
+
+-- Update weak area improvement trend
+updateWeakAreaTrend:
+UPDATE WeakArea
+SET improvementTrend = ?, lastEncountered = ?, timestamp = ?
+WHERE id = ?;
+
+-- Insert or update coaching context
+insertOrReplaceCoachingContext:
+INSERT OR REPLACE INTO CoachingContext(
+    userId, motivationalState, preferredCoachingStyle, contextSummary, lastUpdated
+) VALUES (?, ?, ?, ?, ?);
+
+-- Get coaching context for user
+selectCoachingContext:
+SELECT * FROM CoachingContext WHERE userId = ?;
+
+-- Clean up old weak areas (older than 30 days)
+deleteOldWeakAreas:
+DELETE FROM WeakArea
+WHERE timestamp < ? AND improvementTrend = 'IMPROVING';
+
+-- NEW: Advanced Weak Area Prioritization Tables
+
+-- Prioritized weak areas with intelligent ranking
+CREATE TABLE PrioritizedWeakArea (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    weakAreaId TEXT NOT NULL,
+    priorityLevel TEXT NOT NULL, -- CRITICAL, HIGH, MEDIUM, LOW
+    priorityScore REAL NOT NULL,
+    learningImpactLevel TEXT NOT NULL,
+    learningImpactScore REAL NOT NULL,
+    urgencyLevel TEXT NOT NULL,
+    improvementDifficultyLevel TEXT NOT NULL,
+    improvementDifficultyScore REAL NOT NULL,
+    estimatedDays INTEGER NOT NULL,
+    estimatedHours INTEGER NOT NULL,
+    priorityReason TEXT NOT NULL,
+    lastUpdated INTEGER NOT NULL,
+    FOREIGN KEY (weakAreaId) REFERENCES WeakArea(id)
+);
+
+-- Improvement milestones and progress tracking
+CREATE TABLE ImprovementMilestone (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    skillArea TEXT NOT NULL,
+    currentSuccessRate REAL NOT NULL,
+    targetSuccessRate REAL NOT NULL,
+    targetDate INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    isAchieved INTEGER NOT NULL, -- 0 = false, 1 = true
+    achievedDate INTEGER,
+    timestamp INTEGER NOT NULL
+);
+
+-- Recommended actions for improvement
+CREATE TABLE RecommendedAction (
+    id TEXT PRIMARY KEY,
+    prioritizedWeakAreaId TEXT NOT NULL,
+    actionType TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    estimatedTime INTEGER NOT NULL,
+    priority INTEGER NOT NULL,
+    isCompleted INTEGER NOT NULL DEFAULT 0,
+    completedDate INTEGER,
+    FOREIGN KEY (prioritizedWeakAreaId) REFERENCES PrioritizedWeakArea(id)
+);
+
+-- Skill-based challenge recommendations
+CREATE TABLE SkillBasedRecommendation (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    skillArea TEXT NOT NULL,
+    category TEXT NOT NULL,
+    recommendedDifficulty TEXT NOT NULL,
+    priority TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    estimatedImpactScore REAL NOT NULL,
+    challengeCount INTEGER NOT NULL,
+    isActive INTEGER NOT NULL DEFAULT 1,
+    timestamp INTEGER NOT NULL
+);
+
+-- Real-time weak area insights
+CREATE TABLE WeakAreaInsight (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    skillArea TEXT NOT NULL,
+    insightType TEXT NOT NULL,
+    message TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    actionable INTEGER NOT NULL,
+    suggestedAction TEXT,
+    triggerEvent TEXT NOT NULL,
+    isRead INTEGER NOT NULL DEFAULT 0,
+    timestamp INTEGER NOT NULL
+);
+
+-- Skill mastery level tracking
+CREATE TABLE SkillMasteryLevel (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    skillArea TEXT NOT NULL,
+    category TEXT NOT NULL,
+    currentLevel TEXT NOT NULL,
+    progressToNext REAL NOT NULL,
+    totalAttempted INTEGER NOT NULL,
+    totalCompleted INTEGER NOT NULL,
+    averagePerformance REAL NOT NULL,
+    consistencyScore REAL NOT NULL,
+    speedScore REAL NOT NULL,
+    accuracyScore REAL NOT NULL,
+    complexityHandling REAL NOT NULL,
+    conceptualUnderstanding REAL NOT NULL,
+    lastAssessment INTEGER NOT NULL,
+    UNIQUE(userId, skillArea)
+);
+
+-- NEW: Adaptive Challenges Table
+
+CREATE TABLE AdaptiveChallenge (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    pathId TEXT NOT NULL,
+    userId TEXT NOT NULL
+);
+
+-- Queries for Adaptive Challenges
+
+insertAdaptiveChallenge:
+INSERT INTO AdaptiveChallenge(id, title, description, difficulty, pathId, userId)
+VALUES (?, ?, ?, ?, ?, ?);
+
+selectAdaptiveChallengesByUser:
+SELECT * FROM AdaptiveChallenge WHERE userId = ?;
+
+-- Advanced Weak Area Prioritization Queries
+
+-- Insert prioritized weak area
+insertPrioritizedWeakArea:
+INSERT OR REPLACE INTO PrioritizedWeakArea(
+    id, userId, weakAreaId, priorityLevel, priorityScore, learningImpactLevel,
+    learningImpactScore, urgencyLevel, improvementDifficultyLevel,
+    improvementDifficultyScore, estimatedDays, estimatedHours,
+    priorityReason, lastUpdated
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get prioritized weak areas for user
+selectPrioritizedWeakAreas:
+SELECT * FROM PrioritizedWeakArea
+WHERE userId = ?
+ORDER BY priorityScore DESC, urgencyLevel DESC;
+
+-- Insert improvement milestone
+insertImprovementMilestone:
+INSERT INTO ImprovementMilestone(
+    id, userId, skillArea, currentSuccessRate, targetSuccessRate,
+    targetDate, description, isAchieved, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get active milestones for user
+selectActiveMilestones:
+SELECT * FROM ImprovementMilestone
+WHERE userId = ? AND isAchieved = 0
+ORDER BY targetDate ASC;
+
+-- Mark milestone as achieved
+updateMilestoneAchieved:
+UPDATE ImprovementMilestone
+SET isAchieved = 1, achievedDate = ?
+WHERE id = ?;
+
+-- Insert recommended action
+insertRecommendedAction:
+INSERT INTO RecommendedAction(
+    id, prioritizedWeakAreaId, actionType, title, description,
+    estimatedTime, priority, isCompleted
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get recommended actions for prioritized weak area
+selectRecommendedActions:
+SELECT * FROM RecommendedAction
+WHERE prioritizedWeakAreaId = ?
+ORDER BY priority ASC;
+
+-- Mark action as completed
+updateActionCompleted:
+UPDATE RecommendedAction
+SET isCompleted = 1, completedDate = ?
+WHERE id = ?;
+
+-- Insert skill-based recommendation
+insertSkillBasedRecommendation:
+INSERT INTO SkillBasedRecommendation(
+    id, userId, skillArea, category, recommendedDifficulty, priority,
+    reason, estimatedImpactScore, challengeCount, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get active skill recommendations
+selectActiveSkillRecommendations:
+SELECT * FROM SkillBasedRecommendation
+WHERE userId = ? AND isActive = 1
+ORDER BY priority DESC, estimatedImpactScore DESC;
+
+-- Insert weak area insight
+insertWeakAreaInsight:
+INSERT INTO WeakAreaInsight(
+    id, userId, skillArea, insightType, message, severity,
+    actionable, suggestedAction, triggerEvent, timestamp
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get unread insights for user
+selectUnreadInsights:
+SELECT * FROM WeakAreaInsight
+WHERE userId = ? AND isRead = 0
+ORDER BY timestamp DESC;
+
+-- Mark insight as read
+updateInsightRead:
+UPDATE WeakAreaInsight
+SET isRead = 1
+WHERE id = ?;
+
+-- Insert or update skill mastery level
+insertOrReplaceSkillMastery:
+INSERT OR REPLACE INTO SkillMasteryLevel(
+    id, userId, skillArea, category, currentLevel, progressToNext,
+    totalAttempted, totalCompleted, averagePerformance, consistencyScore,
+    speedScore, accuracyScore, complexityHandling, conceptualUnderstanding,
+    lastAssessment
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- Get skill mastery levels for user
+selectSkillMasteryLevels:
+SELECT * FROM SkillMasteryLevel
+WHERE userId = ?
+ORDER BY currentLevel DESC, progressToNext DESC;
+
+-- ✅ CONTENT REUSE QUERIES - Check existing content before AI generation
+
+-- Check if challenge path exists for specific criteria
+checkExistingChallengePath:
+SELECT id, track FROM ChallengePath 
+WHERE track LIKE '%' || ? || '%'
+LIMIT 1;
+
+-- Find similar tasks by type and content keywords
+findSimilarTasks:
+SELECT id, title, content, type FROM ChallengeTask 
+WHERE type = ? AND (
+    title LIKE '%' || ? || '%' OR 
+    content LIKE '%' || ? || '%'
+)
+LIMIT 5;
+
+-- Check if specific challenge activity exists
+checkExistingActivity:
+SELECT id, prompt, type FROM ChallengeActivity
+WHERE type = ? AND prompt LIKE '%' || ? || '%'
+LIMIT 3;
+
+-- Get reusable content by skill area
+getReusableContentBySkill:
+SELECT ct.id, ct.title, ct.content, ct.type, ca.prompt, ca.type AS "activityType"
+FROM ChallengeTask ct
+LEFT JOIN ChallengeActivity ca ON ct.id = ca.taskId
+WHERE ct.content LIKE '%' || ? || '%' OR ct.title LIKE '%' || ? || '%'
+ORDER BY ct.id DESC
+LIMIT 10;
+
+-- Check content freshness (avoid regenerating recent content)
+checkRecentContent:
+SELECT COUNT(*) AS count FROM ChallengeTask ct
+JOIN ChallengePath cp ON ct.pathId = cp.id
+WHERE cp.track LIKE '%' || ? || '%' 
+AND datetime('now', '-7 days') < datetime(substr(ct.id, 1, 8), 'unixepoch');
+
+-- Find content gaps for recommendation
+findContentGaps:
+SELECT DISTINCT type, COUNT(*) AS count
+FROM ChallengeTask 
+GROUP BY type 
+HAVING count < ?
+ORDER BY count ASC;

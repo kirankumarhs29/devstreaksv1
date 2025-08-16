@@ -41,6 +41,8 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+
 
     // Log screen view once
     LaunchedEffect(Unit) {
@@ -83,6 +85,14 @@ fun SignupScreen(
             )
 
             Spacer(Modifier.height(32.dp))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it; error = null },
+                label = { Text("Your Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
 
             OutlinedTextField(
                 value = email,
@@ -129,7 +139,7 @@ fun SignupScreen(
                         else -> {
                             isLoading = true
                             coroutineScope.launch {
-                                when (val result = authService.signup(email, password)) {
+                                when (val result = authService.signup(name, email, password)) {
                                     is AuthResult.Success -> {
                                         logger.log("Signup success: user=${result.userId}")
                                         logAnalyticsEvent("signup_success", mapOf("user_id" to result.userId))

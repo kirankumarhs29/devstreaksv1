@@ -13,18 +13,16 @@ import androidx.compose.ui.unit.dp
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 
 @Composable
-fun FlashcardActivityCard(activity: ChallengeActivity, onViewed: () -> Unit) {
+fun FlashcardActivityCard(activity: ChallengeActivity, onComplete: () -> Unit) {
     var showBack by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        onViewed()
-    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clickable { showBack = !showBack },
+            .clickable { 
+                showBack = !showBack
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -43,6 +41,14 @@ fun FlashcardActivityCard(activity: ChallengeActivity, onViewed: () -> Unit) {
                     if (!showBack) "👆 Tap to reveal answer" else "👆 Tap to hide",
                     style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 )
+                if (showBack) {
+                    Button(
+                        onClick = onComplete,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Next")
+                    }
+                }
             }
         }
     }

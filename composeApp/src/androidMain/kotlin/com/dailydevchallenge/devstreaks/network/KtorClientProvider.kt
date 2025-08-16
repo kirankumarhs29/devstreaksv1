@@ -30,9 +30,9 @@ actual fun getHttpClient(): HttpClient {
             })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 90_000  // Total request timeout
+            requestTimeoutMillis = 120_000  // Total request timeout
             connectTimeoutMillis = 30_000
-            socketTimeoutMillis = 60_000
+            socketTimeoutMillis = 120_000
         }
     }
 }

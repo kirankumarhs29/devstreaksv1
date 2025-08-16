@@ -1,8 +1,11 @@
 package com.dailydevchallenge.devstreaks.llm
 
+import com.dailydevchallenge.devstreaks.model.ActivityType
+import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
 import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
+import com.dailydevchallenge.devstreaks.model.RemoteResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
 import com.dailydevchallenge.devstreaks.utils.getLogger
 import io.ktor.client.*
@@ -11,11 +14,23 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
+import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
+import com.dailydevchallenge.devstreaks.model.InterviewStepResult
+import com.dailydevchallenge.devstreaks.model.QAHistory
+import com.dailydevchallenge.devstreaks.model.RemoteInterviewStepResult
+import com.dailydevchallenge.devstreaks.model.StepInterviewPayload
+import com.dailydevchallenge.devstreaks.model.StartInterviewPayload
+import com.dailydevchallenge.devstreaks.repository.ChallengeRepository
+import com.dailydevchallenge.devstreaks.utils.generateUUID
+import kotlinx.datetime.Clock
 import kotlinx.serialization.builtins.ListSerializer
+import com.dailydevchallenge.devstreaks.settings.UserPreferences
+import org.koin.compose.getKoin
+import org.koin.compose.koinInject
+import org.koin.core.Koin
 
 
 private val jsonFormatter = Json {
@@ -45,8 +60,7 @@ suspend fun <T> retryWithBackoff(
 }
 
 class GeminiLLMService(
-    private val client: HttpClient,
-    private val apiKey: String
+    private val client: HttpClient
 ) : LLMService {
 
     override suspend fun generateGeminiPlan(
@@ -56,7 +70,8 @@ class GeminiLLMService(
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String
     ): ChallengePathResponse {
         logger.d("Generating Gemini plan with goal: $goal, skills: $skills, experience: $experience, timePerDay: $timePerDay, days: $days, style: $style, fear: $fear")
         val response = retryWithBackoff {
@@ -70,7 +85,8 @@ class GeminiLLMService(
                         timePerDay = timePerDay,
                         days = days,
                         style = style,
-                        fear = fear
+                        fear = fear,
+                        requestId = requestId
                     )
                 )
 
@@ -80,11 +96,24 @@ class GeminiLLMService(
 
         val body = response.bodyAsText()
         logger.d("Gemini response:\n$body")
+
+        // Check if the response contains an error
         return try {
+            val jsonResponse = Json.parseToJsonElement(body).jsonObject
+
+            // Check for error in response
+            if (jsonResponse.containsKey("error")) {
+                val errorMessage = jsonResponse["error"]?.jsonPrimitive?.content ?: "Unknown error"
+                logger.e("Gemini API returned error: $errorMessage")
+//                return createFallbackChallengeResponse(goal, skills, days, requestId)
+            }
+
+            // Parse as ChallengePathResponse if no error
             jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), body)
         } catch (e: Exception) {
             logger.e("Failed to parse Gemini plan response", e)
-            throw e
+            // Return a fallback response instead of throwing
+            createFallbackChallengeResponse(goal, skills, days, requestId)!!
         }
     }
 
@@ -96,13 +125,14 @@ class GeminiLLMService(
         days: Int,
         style: String,
         fear: String,
+        requestId: String,
         useOpenAI: Boolean
     ): ChallengePathResponse {
         logger.i("Generating plan using ${if (useOpenAI) "OpenAI" else "Gemini"}...")
         return if (useOpenAI) {
-            generatePlanWithOpenAI(goal, skills, experience, timePerDay, days, style, fear)
+            generatePlanWithOpenAI(goal, skills, experience, timePerDay, days, style, fear, requestId)
         } else {
-            generateGeminiPlan(goal, skills, experience, timePerDay, days, style, fear)
+            generateGeminiPlan(goal, skills, experience, timePerDay, days, style, fear, requestId)
         }
     }
 
@@ -113,7 +143,8 @@ class GeminiLLMService(
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String
     ): ChallengePathResponse {
         logger.d("Generating OpenAI plan with goal: $goal, skills: $skills, experience: $experience, timePerDay: $timePerDay, days: $days, style: $style, fear: $fear")
         val response = retryWithBackoff {
@@ -127,7 +158,8 @@ class GeminiLLMService(
                         timePerDay = timePerDay,
                         days = days,
                         style = style,
-                        fear = fear
+                        fear = fear,
+                        requestId = requestId
                     )
                 )
 
@@ -135,56 +167,42 @@ class GeminiLLMService(
         }
 
         val body = response.bodyAsText()
-        logger.d("OpenAI response:\n$body")
+        logger.d("OpenAI response length: ${body.length} characters")
+        logger.d("OpenAI response preview:\n${body.take(500)}...")
+
+        // Check if response appears to be truncated
+        if (!body.trim().endsWith("}") && !body.trim().endsWith("]")) {
+            logger.e("Response appears to be truncated. Last 100 chars: ${body.takeLast(100)}")
+            throw Exception("Incomplete response received from AI service")
+        }
 
         return try {
+            // First, try to parse as a direct ChallengePathResponse
             jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), body)
-        } catch (e: Exception) {
-            logger.e("Failed to parse OpenAI plan response", e)
-            throw e
-        }
-    }
-
-    override suspend fun generateQuickPractice(skills: List<String>): ChallengeTask {
-        val prompt = buildQuickPracticePrompt(skills)
-        logger.i("Generating quick practice with skills: $skills")
-        logger.d("Quick practice prompt: $prompt")
-
-        val response = retryWithBackoff {
-            client.post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent") {
-                url.parameters.append("key", apiKey)
-                contentType(ContentType.Application.Json)
-                setBody(mapOf("contents" to listOf(mapOf("parts" to listOf(mapOf("text" to prompt))))))
+        } catch (directParseException: Exception) {
+            // If that fails, check if it's an error wrapper with rawResponse
+            try {
+                val jsonElement = Json.parseToJsonElement(body)
+                if (jsonElement.jsonObject.containsKey("error") && jsonElement.jsonObject.containsKey("rawResponse")) {
+                    logger.d("Detected error wrapper, extracting rawResponse")
+                    val rawResponse = jsonElement.jsonObject["rawResponse"]?.jsonPrimitive?.content
+                    if (rawResponse != null) {
+                        logger.d("Attempting to parse extracted rawResponse")
+                        jsonFormatter.decodeFromString(ChallengePathResponse.serializer(), rawResponse)
+                    } else {
+                        throw Exception("rawResponse field is null")
+                    }
+                } else {
+                    // Re-throw the original exception if it's not an error wrapper
+                    throw directParseException
+                }
+            } catch (e: Exception) {
+                logger.e("Failed to parse OpenAI plan response", e)
+                logger.e("Original parse error: ${directParseException.message}")
+                logger.e("Response body (first 1000 chars): ${body.take(1000)}")
+                logger.e("Response body (last 200 chars): ${body.takeLast(200)}")
+                throw Exception("Failed to parse AI response: ${e.message}")
             }
-        }
-
-        val text = response.bodyAsText()
-        logger.d("Gemini quick practice response raw: $text")
-        val content = try {
-            Json.parseToJsonElement(text)
-                .jsonObject["candidates"]
-                ?.jsonArray?.get(0)
-                ?.jsonObject?.get("content")
-                ?.jsonObject?.get("parts")
-                ?.jsonArray?.get(0)
-                ?.jsonObject?.get("text")
-                ?.jsonPrimitive?.content ?: throw Exception("No content")
-        } catch (e: Exception) {
-            logger.e("Failed to extract quick practice content", e)
-            throw e
-        }
-
-        val cleanedJson = content
-            .removePrefix("```json")
-            .removeSuffix("```")
-            .trim()
-        logger.d("Cleaned quick practice JSON: $cleanedJson")
-
-        return try {
-            jsonFormatter.decodeFromString(ChallengeTask.serializer(), cleanedJson)
-        } catch (e: Exception) {
-            logger.e("Failed to parse ChallengeTask from quick practice", e)
-            throw e
         }
     }
 
@@ -212,10 +230,18 @@ class GeminiLLMService(
     override suspend fun generateResponse(prompt: List<ChatMessage>): String {
         logger.d("Sending prompt to Gemini: $prompt")
 
+        // Firebase Cloud Function expects direct array of chat messages
+        val payload = prompt.map { message ->
+            mapOf(
+                "role" to message.role,
+                "content" to message.content
+            )
+        }
+
         val response = retryWithBackoff {
             client.post("https://us-central1-devsteaks.cloudfunctions.net/generateResponse") {
                 contentType(ContentType.Application.Json)
-                setBody(prompt) // Sending List<ChatMessage> directly
+                setBody(payload) // Send direct array of messages
             }
         }
 
@@ -223,12 +249,22 @@ class GeminiLLMService(
         logger.d("Gemini raw chat response:\n$body")
 
         return try {
-            Json.parseToJsonElement(body)
-                .jsonObject["reply"]  // ✅ Matches Firebase format
-                ?.jsonPrimitive?.content ?: "No response from DevCoach."
+            val jsonResponse = Json.parseToJsonElement(body).jsonObject
+
+            // Check for error first
+            if (jsonResponse.containsKey("error")) {
+                val errorMessage = jsonResponse["error"]?.jsonPrimitive?.content ?: "Unknown error"
+                logger.e("Gemini API returned error: $errorMessage")
+                return "I'm having trouble connecting to my AI brain right now. Please try again in a moment! 🤖"
+            }
+
+            // Extract reply from response
+            jsonResponse["reply"]?.jsonPrimitive?.content
+                ?: jsonResponse["response"]?.jsonPrimitive?.content // Try alternative field name
+                ?: "No response from DevCoach."
         } catch (e: Exception) {
             logger.e("Failed to parse DevCoach response", e)
-            "Oops, DevCoach couldn't reply."
+            "Sorry, I'm having trouble understanding the response. Let me try to help you differently! 🤗"
         }
     }
     override suspend fun reviewCode(activityPrompt: String, language: String?, userCode: String):
@@ -259,6 +295,15 @@ class GeminiLLMService(
     override suspend fun analyzeResume(resumeText: String, jobRole: String): ResumeAnalysis {
         logger.i("Analyzing resume for role: $jobRole")
         return try {
+            require(jobRole.isNotBlank()) { "Job role cannot be blank" }
+            require(resumeText.isNotBlank()) { "Resume text cannot be blank" }
+            logger.d("Resume text length: ${resumeText.length}, job role: $jobRole")
+            // Log the first 100 characters of the resume text for debugging
+            if (resumeText.length > 100) {
+                logger.d("Resume text preview: ${resumeText.take(100)}...")
+            } else {
+                logger.d("Resume text preview: $resumeText")
+            }
             val response = retryWithBackoff {
                 client.post("https://us-central1-devsteaks.cloudfunctions.net/analyzeResume") {
                     contentType(ContentType.Application.Json)
@@ -267,7 +312,21 @@ class GeminiLLMService(
             }
             val body = response.bodyAsText()
             logger.d("Resume analysis response: $body")
-            jsonFormatter.decodeFromString(ResumeAnalysis.serializer(), body)
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                val apiResult = jsonFormatter.decodeFromString(RemoteResumeAnalysis.serializer(), body)
+                ResumeAnalysis(
+                    id = generateUUID(),
+                    userId = UserPreferences.getSafeUserId(), // or whichever user id you use
+                    summary = apiResult.summary,
+                    skillsMatched = apiResult.skillsMatched,
+                    skillsMissing = apiResult.skillsMissing,
+                    jobMatchScore = apiResult.jobMatchScore.toLong(),
+                    recommendations = apiResult.recommendations,
+                    createdAt = Clock.System.now().toEpochMilliseconds()
+                )
+            }
         } catch (e: Exception) {
             logger.e("Failed to parse resume analysis", e)
             throw e
@@ -296,7 +355,11 @@ class GeminiLLMService(
             }
             val body = response.bodyAsText()
             logger.d("Interview questions raw JSON: $body")
-            jsonFormatter.decodeFromString(ListSerializer(InterviewQuestion.serializer()), body)
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                jsonFormatter.decodeFromString(ListSerializer(InterviewQuestion.serializer()), body)
+            }
         } catch (e: Exception) {
             logger.e("Failed to parse interview questions", e)
             throw e
@@ -307,8 +370,139 @@ class GeminiLLMService(
     override fun pickPdfAndExtractText(onExtracted: (String) -> Unit) {
         PlatformUtils.pickPdfAndExtract(onExtracted)
     }
+    override suspend fun startInterviewSession(
+        role: String,
+        resumeSummary: String,
+        skills: List<String>
+    ): InterviewStepResult {
+        logger.i("Starting interview session for role: $role")
+        val payload = StartInterviewPayload(
+            jobRole = role,
+            resumeSummary = resumeSummary,
+            skills = skills
+        )
+        return try {
+            require(role.isNotBlank()) { "Job role cannot be blank" }
+            require(resumeSummary.isNotBlank()) { "Resume summary cannot be blank" }
+            require(skills.isNotEmpty()) { "Skills list cannot be empty" }
+            val response = retryWithBackoff {
+                client.post("https://us-central1-devsteaks.cloudfunctions.net/startInterviewSession") {
+                    contentType(ContentType.Application.Json)
+                    setBody(payload)
+                }
+            }
+            val body = response.bodyAsText()
+            logger.d("Start interview session raw response: $body")
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                val apiResult = jsonFormatter.decodeFromString(
+                    RemoteInterviewStepResult.serializer(),
+                    body)
+                InterviewStepResult(
+                    question = apiResult.question?.let { remoteQ ->
+                        InterviewQuestion(
+                            id = generateUUID(),
+                            question = remoteQ.question,
+                            topic = remoteQ.topic,
+                            difficulty = remoteQ.difficulty,
+                            followUp = remoteQ.followUp
+                        )
+                    },
+                    feedback = apiResult.feedback,
+                    done = apiResult.done
+                )
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to start interview session", e)
+            throw e
+        }
+    }
 
+    override suspend fun submitInterviewAnswer(
+        answer: String,
+        previousQuestion: InterviewQuestion,
+        context: InterviewSessionContext
+    ): InterviewStepResult {
+        logger.i("Submitting interview answer for question: ${previousQuestion.question}")
+        val payload = StepInterviewPayload(
+            jobRole = context.jobRole,
+            resumeSummary = context.resumeSummary,
+            skills = context.skills,
+            lastQuestion = previousQuestion.question,
+            userAnswer = answer,
+            answerHistory = context.answerHistory.map { QAHistory(it.first, it.second) })
+        return try {
+            val response = retryWithBackoff {
+                client.post("https://us-central1-devsteaks.cloudfunctions.net/stepInterview") {
+                    contentType(ContentType.Application.Json)
+                    setBody(payload)
+                }
+            }
+            val body = response.bodyAsText()
+            logger.d("Step interview raw response: $body")
+            if (body.trim().startsWith("<")) {
+                throw IllegalStateException("Backend returned HTML (likely 404/not deployed/or error): $body")
+            } else {
+                val apiResult = jsonFormatter.decodeFromString(RemoteInterviewStepResult.serializer(), body)
+                InterviewStepResult(
+                    question = apiResult.question?.let { remoteQ ->
+                        InterviewQuestion(
+                            id = generateUUID(), // Always assign ID on the client!
+                            question = remoteQ.question,
+                            topic = remoteQ.topic,
+                            difficulty = remoteQ.difficulty,
+                            followUp = remoteQ.followUp
+                        )
+                    },
+                    feedback = apiResult.feedback,
+                    done = apiResult.done
+                )
+            }
+        } catch (e: Exception) {
+            logger.e("Failed to process interview step", e)
+            throw e
+        }
+    }
 
-
-
+    // Fallback method to create a basic challenge response when API fails
+    private suspend fun createFallbackChallengeResponse(
+        goal: String,
+        skills: List<String>,
+        days: Int,
+        requestId: String
+    ): ChallengePathResponse? {
+        // Instead of hardcoded content, try to reuse existing content from database
+        return try {
+            val repository: ChallengeRepository = Koin().get<ChallengeRepository>()
+            
+            // Check for existing similar content first
+            val existingContent = repository.getReusableContentBySkill(goal)
+            if (existingContent.isNotEmpty()) {
+                logger.d("GeminiLLMService", "Reusing existing content for $goal")
+                
+                val reusedTasks = existingContent.take(minOf(days, existingContent.size)).mapIndexed { index, (task, activities) ->
+                    task.copy(
+                        id = "reused-${task.id}-$index",
+                        pathId = requestId,
+                        day = index + 1,
+                        challenges = activities
+                    )
+                }
+                
+                return ChallengePathResponse(
+                    track = "$goal Learning Path (Curated)",
+                    days = reusedTasks
+                )
+            }
+            
+            // If no existing content, return null to trigger retry or empty state
+            logger.w("GeminiLLMService", "No fallback content available for $goal")
+            null
+            
+        } catch (e: Exception) {
+            logger.e("GeminiLLMService", e, "Error creating fallback response")
+            null
+        }
+    }
 }

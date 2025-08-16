@@ -7,12 +7,14 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.dailydevchallenge.devstreaks.model.User
 
 private lateinit var appContext: Context
 
 fun initSessionManager(context: Context) {
     appContext = context.applicationContext
 }
+fun getAppContext(): Context = appContext
 
 actual fun getSessionManager(): SessionManager = AndroidSessionManager(appContext)
 

@@ -1,0 +1,41 @@
+-- CREATE TABLE ResumeAnalysis (
+--     id TEXT NOT NULL PRIMARY KEY,
+--     userId TEXT NOT NULL,
+--     resumeText TEXT NOT NULL,
+--     summary TEXT,
+--     skillsParsed TEXT,
+--     skillsGaps TEXT,
+--     jobMatchScore INTEGER,
+--     recommendations TEXT,
+--     createdAt INTEGER NOT NULL
+-- );
+--
+-- -- InterviewSession.sq
+-- CREATE TABLE InterviewSession (
+--     id TEXT NOT NULL PRIMARY KEY,
+--     userId TEXT NOT NULL,
+--     resumeAnalysisId TEXT NOT NULL REFERENCES ResumeAnalysis(id),
+--     sessionDate INTEGER NOT NULL,
+--     summary TEXT
+-- );
+--
+-- -- InterviewQuestion.sq
+-- CREATE TABLE InterviewQuestion (
+--     id TEXT NOT NULL PRIMARY KEY,
+--     questionText TEXT NOT NULL,
+--     topic TEXT,
+--     difficulty INTEGER,
+--     lastAskedAt INTEGER,
+--     timesAsked INTEGER DEFAULT 0
+-- );
+--
+-- -- UserAnswer.sq
+-- CREATE TABLE UserAnswer (
+--     id TEXT NOT NULL PRIMARY KEY,
+--     questionId TEXT NOT NULL REFERENCES InterviewQuestion(id),
+--     sessionId TEXT NOT NULL REFERENCES InterviewSession(id),
+--     answerText TEXT NOT NULL,
+--     feedback TEXT,
+--     score INTEGER,
+--     timestamp INTEGER NOT NULL
+-- );

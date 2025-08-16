@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can read/write their own profile + read others for leaderboards
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // User stats for leaderboard calculations
+    match /user_stats/{statId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+
+    // Friends system
+    match /friends/{userId}/friends/{friendId} {
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == userId || request.auth.uid == friendId);
+    }
+
+    // Subscriptions (private to user)
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+  }
+}
+

@@ -1,8 +1,9 @@
 package com.dailydevchallenge.devstreaks.llm
 
 import com.dailydevchallenge.devstreaks.model.ChallengePathResponse
-import com.dailydevchallenge.devstreaks.model.ChallengeTask
 import com.dailydevchallenge.devstreaks.model.InterviewQuestion
+import com.dailydevchallenge.devstreaks.model.InterviewSessionContext
+import com.dailydevchallenge.devstreaks.model.InterviewStepResult
 import com.dailydevchallenge.devstreaks.model.ResumeAnalysis
 import com.dailydevchallenge.devstreaks.utils.PlatformUtils
 
@@ -14,10 +15,9 @@ interface LLMService {
         timePerDay: Int,
         days: Int,
         style: String,
-        fear: String
+        fear: String,
+        requestId: String,
     ): ChallengePathResponse
-
-    suspend fun generateQuickPractice(skills: List<String>): ChallengeTask
 
     suspend fun generatePlan(
         goal: String,
@@ -27,6 +27,7 @@ interface LLMService {
         days: Int,
         style: String,
         fear: String,
+        requestId: String,
         useOpenAI: Boolean = false
     ): ChallengePathResponse
 
@@ -39,6 +40,18 @@ interface LLMService {
     fun pickPdfAndExtractText(onExtracted: (String) -> Unit) {
         PlatformUtils.pickPdfAndExtract(onExtracted)
     }
+    suspend fun startInterviewSession(
+        role: String,
+        resumeSummary: String,
+        skills: List<String>
+    ): InterviewStepResult
+
+    suspend fun submitInterviewAnswer(
+        answer: String,
+        previousQuestion: InterviewQuestion,
+        context: InterviewSessionContext
+    ): InterviewStepResult
+
 
 
 

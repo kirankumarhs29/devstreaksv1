@@ -10,13 +10,10 @@ import androidx.compose.ui.unit.dp
 import com.dailydevchallenge.devstreaks.model.ChallengeActivity
 
 @Composable
-fun ProjectActivityCard(activity: ChallengeActivity, onViewed: () -> Unit) {
+fun ProjectActivityCard(activity: ChallengeActivity, onComplete: () -> Unit) {
     var showResources by remember { mutableStateOf(false) }
     var isSubmitted by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isSubmitted) {
-        if (isSubmitted) onViewed()
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -54,6 +51,14 @@ fun ProjectActivityCard(activity: ChallengeActivity, onViewed: () -> Unit) {
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     activity.videoUrl?.let { Text("🎥 Video: $it", style = MaterialTheme.typography.bodySmall) }
                     activity.language?.let { Text("🧰 Tech Stack: $it", style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+            if (isSubmitted) {
+                Button(
+                    onClick = onComplete,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Next")
                 }
             }
         }
